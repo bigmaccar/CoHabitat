@@ -13,9 +13,9 @@ function Search(){
                 </div>
                 <input type="text" placeholder="Search"></input>
                 <br></br>
-                <div class = "apartmentListWrapper">
-                    <div class = "apartmentList">
-                        <p>testing</p>
+                <div class = "apartmentListWrapper"> {/* The wrapper is the box itself, contains all of the information. Duplicate this and the information in it per apartment*/}
+                    <div class = "apartmentList"> {/* This is the actual apartment information, contained in the box*/}
+                        <p>testing</p> {/* Will update this layout later */}
                         <h1>Apartment Name</h1>
                         <p>desc</p>
                         <p>sample photo somewhere</p>
@@ -31,7 +31,7 @@ function Search(){
                 </div>
             </div>
             <div class="bodySearch">
-                <div class = "filters">
+                <div class = "filters"> {/* Update later with decided filters. Currently includes different option types*/}
                     <p>OPTION 1</p>
                     <label class="switch" for="option1">
                         <input type="checkbox" id="option1" value = "option1"/>
