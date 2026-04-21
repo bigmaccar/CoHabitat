@@ -1,0 +1,311 @@
+body {
+    font-family: "Trebuchet MS";
+    font-size: 17px;
+    justify-content: center;
+    align-items: center;
+    margin:0;
+    padding: 0;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+a {
+  color:#244F26
+}
+
+a:visited{
+  color:#244F26;
+}
+
+/* HOME */
+.layout {
+  width: 100%;
+
+  display: grid;
+  grid:
+    ". . ." 0%
+    "leftSide body ." 1fr
+    "footer footer footer" auto
+    / 15% 1fr 0%;
+  gap: 8px;
+}
+
+.leftSide { grid-area: leftSide; }
+.body { grid-area: body; }
+.footer { grid-area: footer; }
+
+.header {
+  justify-content: right;
+}
+
+.header ul {
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background-color: #68B684;
+}
+
+.header ul li {
+  float: right;
+}
+
+.header ul li a {
+  display: block;
+  color: white;
+  text-align: right;
+  padding: 35px 16px;
+  text-decoration: none;
+  justify-content: right;
+}
+
+.header ul li a:hover {
+  background-color: #244F26;
+}
+
+.header ul li h2 {
+  color: white;
+}
+
+.sidebar {
+  justify-content: left;
+}
+
+.sidebar ul {
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background-color: #68B684;
+}
+
+.sidebar ul li a {
+  display: block;
+  color: white;
+  text-align: left;
+  padding: 35px 30px;
+  text-decoration: none;
+  justify-content: left;
+}
+
+.sidebar ul li a:hover {
+  background-color: #244F26;
+}
+
+.sidebar ul li h2 {
+  color: white;
+}
+
+.apartment {
+  background-color: #244F26;
+  color: #FDFDFF;
+  height: 200px;
+  width: auto;
+  display: flex;
+  align-items: flex-end;
+  margin-left: 10px;
+  padding: 20px;
+}
+
+.wrapper {
+  background-color: #FDFDFF;
+  height: 200px;
+  width: auto;
+  margin-left: 10px;
+}
+
+.container{
+  display: flex;
+  justify-content: center;
+}
+
+.container div {
+  margin: 10px;
+  padding: 20px;
+  height: 200px;
+  width: 200px;
+  background-color: #68B684;
+}
+
+/* SEARCH */
+.layoutSearch {
+  width: 100%;
+
+  display: grid;
+  grid:
+    "sidebarSearch bodySearch" 1fr
+    / 70% 1fr;
+  gap: 8px;
+}
+
+.sidebarSearch { grid-area: sidebarSearch; }
+.bodySearch { grid-area: bodySearch; }
+
+.search {
+  margin-left: 30px;
+}
+
+.filters {
+  justify-content: center;
+  padding: 20px;
+  margin-top: 50px;
+  margin-left: 100px;
+  background-color: #68B684;
+  width: 200px;
+  color: white;
+}
+
+input[type=text]{
+  box-sizing: border-box;
+  border: 3px solid #244F26;
+  border-radius: 5px;  width: 950px;
+  padding: 12px;
+  margin: 10px 0;
+  margin-left: 75px;
+  /* need to add search icon*/
+}
+
+.apartmentListWrapper {
+  display: flex;
+  flex-direction: column;
+  width: 800px;
+  height: 200px;
+  margin-left: 150px;
+  margin-bottom: 10px;
+  padding: 10px;
+  border: 2px solid black;
+  border-radius: 8px;
+}
+
+.apartmentList {
+  float: right;
+}
+
+/* The switch - the box around the slider */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 20px;
+}
+
+/* Hide default HTML checkbox */
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+/* The slider */
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  -webkit-transition: .4s;
+  transition: .4s;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 15px;
+  width: 15px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  -webkit-transition: .4s;
+  transition: .4s;
+}
+
+input:checked + .slider {
+  background-color: #244F26;
+}
+
+input:focus + .slider {
+  box-shadow: 0 0 1px #244F26;
+}
+
+input:checked + .slider:before {
+  -webkit-transform: translateX(17px);
+  -ms-transform: translateX(17px);
+  transform: translateX(17px);
+}
+
+/* Rounded sliders */
+.slider.round {
+  border-radius: 20px;
+}
+
+.slider.round:before {
+  border-radius: 50%;
+}
+
+/* bar slider */
+.slidecontainer {
+  width: 100%; /* Width of the outside container */
+}
+
+/* Mouse-over effects */
+.slider:hover {
+  opacity: 1; /* Fully shown on mouse-over */
+}
+
+.sliderBar {
+  width: 200px;
+  height: 15px;
+  border-radius: 5px;  
+  background: white;
+  outline: none;
+  opacity: 0.7;
+  -webkit-transition: .2s;
+  transition: opacity .2s;
+}
+
+.sliderBar::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 25px;
+  height: 25px;
+  border-radius: 50%; 
+  background: #244F26;
+  cursor: pointer;
+}
+
+.sliderBar::-moz-range-thumb {
+  width: 25px;
+  height: 25px;
+  border-radius: 50%;
+  background: #244F26;
+  cursor: pointer;
+}
+
+/* Login/Signup */
+
+.login {
+  margin-top: 100px;
+  font-size: 25px;
+}
+
+.login input[type=text]{
+  box-sizing: border-box;
+  border: 3px solid #244F26;
+  border-radius: 5px;  width: 200px;
+  padding: 12px;
+  margin: 10px 0;
+}
+
+input[type=submit]{
+  background-color: #68B684;
+  font-size: 25px;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 10px;
+}
