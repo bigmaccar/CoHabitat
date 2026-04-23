@@ -1,10 +1,19 @@
-const {Household} = require("../schema.js");
+const {Household, User} = require("../schema.js");
 
 const createHousehold = async(req, res) => {
     try{
-            const newHousehold = new Household(req.body);
-            const savedData = await newHousehold.save();
-            res.status(200).json({message: "Household created successfully"});
+        const { createdBy, ...householdData } = req.body;
+        const newHousehold = new Household({
+            ...householdData,
+            members: createdBy ? [{ userId: createdBy, isAdmin: true }] : []
+        });
+        const savedData = await newHousehold.save();
+        if (createdBy) {
+            await User.findByIdAndUpdate(createdBy, {
+                $push: { households: { householdId: savedData._id, isAdmin: true } }
+            });
+        }
+        res.status(200).json(savedData);
     } catch (error){
         res.status(500).json({errorMessage:error.message})
     }

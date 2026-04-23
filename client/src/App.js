@@ -1,6 +1,6 @@
 import logo from './logo.svg';
 import './App.css';
-import { BrowserRouter, Link, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Link, Routes, Route, Navigate } from 'react-router-dom';
 import Home from "./Home"
 import Search from './Search';
 import Login from './Login';
@@ -13,6 +13,12 @@ import List from './List';
 import Settings from './Settings';
 import ApartmentListing from './ApartmentListing';
 import Apartment from './Apartment';
+
+function ProtectedRoute({ children }) {
+  const userId = localStorage.getItem("userId");
+  if (!userId) return <Navigate to="/Login" />;
+  return children;
+}
 
 function App() {
   return (
@@ -28,18 +34,18 @@ function App() {
       </ul>
     </div>
       <Routes>
-          <Route path = "/" element = {<Home/>}/>
-          <Route path = "/Search" element = {<Search/>}/>
           <Route path = "/Login" element = {<Login/>}/>
           <Route path = "/Signup" element = {<Signup/>}/>
-          <Route path = "/Roommates" element = {<Roommates/>}/>
-          <Route path = "/Bills" element = {<Bills/>}/>
-          <Route path = "/Calendar" element = {<Calendar/>}/>
-          <Route path = "/Lists" element = {<Lists/>}/>
-          <Route path = "/List" element = {<List/>}/>
-          <Route path = "/Settings" element = {<Settings/>}/>
-          <Route path = "/ApartmentListing" element = {<ApartmentListing/>}/>
-          <Route path = "/Apartment" element = {<Apartment/>}/>
+          <Route path = "/" element = {<ProtectedRoute><Home/></ProtectedRoute>}/>
+          <Route path = "/Search" element = {<ProtectedRoute><Search/></ProtectedRoute>}/>
+          <Route path = "/Roommates" element = {<ProtectedRoute><Roommates/></ProtectedRoute>}/>
+          <Route path = "/Bills" element = {<ProtectedRoute><Bills/></ProtectedRoute>}/>
+          <Route path = "/Calendar" element = {<ProtectedRoute><Calendar/></ProtectedRoute>}/>
+          <Route path = "/Lists" element = {<ProtectedRoute><Lists/></ProtectedRoute>}/>
+          <Route path = "/List" element = {<ProtectedRoute><List/></ProtectedRoute>}/>
+          <Route path = "/Settings" element = {<ProtectedRoute><Settings/></ProtectedRoute>}/>
+          <Route path = "/ApartmentListing" element = {<ProtectedRoute><ApartmentListing/></ProtectedRoute>}/>
+          <Route path = "/Apartment" element = {<ProtectedRoute><Apartment/></ProtectedRoute>}/>
       </Routes>
     </BrowserRouter>
   );

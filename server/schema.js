@@ -5,6 +5,7 @@ const UserSchema = new Schema({
   firstName: String,
   lastName: String,
   email: { type: String, unique: true, required: true },
+  password: String,
   roles: [String],
   lifestyleTags: [String],
   households: [
@@ -29,7 +30,7 @@ const HouseholdSchema = new Schema({
       isAdmin: Boolean
     }
   ]
-}, { timestamps: true, collection: "User"});
+}, { timestamps: true, collection: "Household"});
 
 const ListingSchema = new Schema({
   householdId: { type: Schema.Types.ObjectId, ref: "Household" },
@@ -72,7 +73,15 @@ const BillSchema = new Schema({
       amountOwed: Number,
       isPaid: Boolean
     }
-  ]
+  ],
+  // New fields  
+  dueDate: Date,
+  comments: [{
+    author: String,
+    text: String,
+    date: String
+  }]
+
 }, { timestamps: true, collection: "Bill" });
 
 const CalendarEventSchema = new Schema({

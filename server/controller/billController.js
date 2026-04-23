@@ -23,6 +23,22 @@ const getBillById = async(req, res) =>{
     }
 }
 
+
+const getBillsByHousehold = async (req,res) => {
+
+    try {
+        const householdId = req.query.householdId;
+        const bills = await Bill.find({householdId});
+        res.status(200).json(bills);
+    }
+    
+    
+    catch(error) {
+    res.status(500).json({errorMessage: error.message})
+    }
+}
+
+
 const getShareById = async(req, res) =>{
     try{
          const id = req.body._id;
@@ -54,7 +70,7 @@ const updateBill = async(req, res)=>{
 
 const deleteBill = async(req, res)=>{
     try{
-        const id = req.body._id;
+        const id = req.params.id;
          const billExist = await Bill.findById(id);
          if (!billExist){
             return res.status(404).json({message: "Bill not found."});
@@ -66,4 +82,4 @@ const deleteBill = async(req, res)=>{
     }
 }
 
-module.exports = {createBill, getBillById, getShareById, updateBill, deleteBill};
+module.exports = {createBill,getBillsByHousehold, getBillById, getShareById, updateBill, deleteBill};

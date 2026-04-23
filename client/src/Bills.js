@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import React, { useState } from "react";
+import React, { useState ,useEffect} from "react";
 import axios from 'axios';
 
 // Replace with real roommates from household API with backend
@@ -27,24 +27,10 @@ function Sidebar() {
 
 
 function Bills() {
-  const [bills, setBills] = useState([
-    {
-      id: 1,
-      billName: "Rent",
-      totalAmount: 1200,
-      dueDate: "2026-05-01",
-      shares: ROOMMATES.map(r => ({ id: r.id, name: r.name, amountOwed: 400, isPaid: false })),
-      comments: [],
-    },
-    {
-      id: 2,
-      billName: "Electric",
-      totalAmount: 90,
-      dueDate: "2026-05-10",
-      shares: ROOMMATES.map(r => ({ id: r.id, name: r.name, amountOwed: 30, isPaid: false })),
-      comments: [],
-    },
-  ]);
+
+  const householdId = localStorage.getItem("householdId") || "YOUR_HOUSEHOLD_ID_HERE";
+
+  const [bills, setBills] = useState([]);
 
   const [selectedBillId, setSelectedBillId] = useState(null);
   const [activeRoommate, setActiveRoommate] = useState(null);
@@ -62,93 +48,135 @@ function Bills() {
   const [customSplits, setCustomSplits] = useState({});
   const [newComment, setNewComment] = useState("");
 
-  const selectedBill = bills.find(b => b.id === selectedBillId);
+  const selectedBill = bills.find(b => b._id === selectedBillId);
+
+  useEffect(() => {
+    const fetchBills = async () => {
+      try {
+        const res = await axios.get("http://localhost:7000/api/bill/household", {
+          params: { householdId: householdId }
+        });
+        setBills(res.data);
+      } catch (err) {
+        console.log(err);
+      }
+    };
+    fetchBills();
+  }, []);
 
   function getDaysUntilDue(dueDate) {
     const now = new Date();
-    const due = new Date(dueDate);
-    return Math.ceil((due - now) / (1000 * 60 * 60 * 24));
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const d = new Date(dueDate);
+    const due = new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+    return Math.ceil((due - today) / (1000 * 60 * 60 * 24));
   }
 
-  function addBill(e) {
+  async function addBill(e) {
     e.preventDefault();
     if (!newBillName || !newAmount) return;
     const total = parseFloat(newAmount);
     const splitAmount = parseFloat((total / ROOMMATES.length).toFixed(2));
-    setBills([...bills, {
-      id: Date.now(),
-      billName: newBillName,
-      totalAmount: total,
-      dueDate: newDueDate || null,
-      shares: ROOMMATES.map(r => ({ id: r.id, name: r.name, amountOwed: splitAmount, isPaid: false })),
-      comments: [],
-    }]);
     setNewBillName("");
     setNewAmount("");
     setNewDueDate("");
     setShowAddForm(false);
-    // Add POST /api/bill
+    try {
+      await axios.post("http://localhost:7000/api/bill", {
+        householdId: householdId,
+        billName: newBillName,
+        totalAmount: total,
+        dueDate: newDueDate || null,
+        shares: ROOMMATES.map(() => ({ amountOwed: splitAmount, isPaid: false })),
+        comments: []
+      });
+      const res = await axios.get("http://localhost:7000/api/bill/household", { params: { householdId } });
+      setBills(res.data);
+    } catch (err) {
+      console.log(err);
+    }
   }
 
-  function deleteBill(billId) {
-    setBills(bills.filter(b => b.id !== billId));
+  async function deleteBill(billId) {
     setSelectedBillId(null);
-    // Add DELETE /api/delete/bill/:id
+    try {
+      await axios.delete("http://localhost:7000/api/delete/bill/" + billId);
+      const res = await axios.get("http://localhost:7000/api/bill/household", { params: { householdId } });
+      setBills(res.data);
+    } catch (err) {
+      console.log(err);
+    }
   }
 
-  function togglePaid(billId, roommateId) {
-    setBills(bills.map(bill => {
-      if (bill.id !== billId) return bill;
-      return { ...bill, shares: bill.shares.map(s => s.id === roommateId ? { ...s, isPaid: !s.isPaid } : s) };
-    }));
-    //  Add PUT /api/update/bill/:id
+  async function togglePaid(billId, roommateId) {
+    const bill = bills.find(b => b._id === billId);
+    const updatedShares = bill.shares.map(s => s._id === roommateId ? { ...s, isPaid: !s.isPaid } : s);
+    try {
+      await axios.put("http://localhost:7000/api/update/bill/" + billId, { _id: billId, shares: updatedShares });
+      const res = await axios.get("http://localhost:7000/api/bill/household", { params: { householdId } });
+      setBills(res.data);
+    } catch (err) {
+      console.log(err);
+    }
   }
 
-  function updateTotal(billId) {
+  async function updateTotal(billId) {
     const newTotal = parseFloat(editTotalValue);
     if (isNaN(newTotal) || newTotal <= 0) return;
     const splitAmount = parseFloat((newTotal / ROOMMATES.length).toFixed(2));
-    setBills(bills.map(bill => {
-      if (bill.id !== billId) return bill;
-      return { ...bill, totalAmount: newTotal, shares: bill.shares.map(s => ({ ...s, amountOwed: splitAmount })) };
-    }));
     setEditingTotal(false);
-    // Add PUT /api/update/bill/:id
+    try {
+      await axios.put("http://localhost:7000/api/update/bill/" + billId, { _id: billId, totalAmount: newTotal, shares: bills.find(b => b._id === billId).shares.map(s => ({ ...s, amountOwed: splitAmount })) });
+      const res = await axios.get("http://localhost:7000/api/bill/household", { params: { householdId } });
+      setBills(res.data);
+    } catch (err) {
+      console.log(err);
+    }
   }
 
-  function updateDueDate(billId) {
+  async function updateDueDate(billId) {
     if (!editDueDateValue) return;
-    setBills(bills.map(bill => bill.id !== billId ? bill : { ...bill, dueDate: editDueDateValue }));
     setEditingDueDate(false);
-    // Add PUT /api/update/bill/:id
+    try {
+      await axios.put("http://localhost:7000/api/update/bill/" + billId, { _id: billId, dueDate: editDueDateValue });
+      const res = await axios.get("http://localhost:7000/api/bill/household", { params: { householdId } });
+      setBills(res.data);
+    } catch (err) {
+      console.log(err);
+    }
   }
 
-  function updateSplit(billId) {
-    setBills(bills.map(bill => {
-      if (bill.id !== billId) return bill;
-      return {
-        ...bill,
-        totalAmount: Object.values(customSplits).reduce((sum, v) => sum + (parseFloat(v) || 0), 0),
-        shares: bill.shares.map(s => ({ ...s, amountOwed: parseFloat(customSplits[s.id]) || s.amountOwed })),
-      };
-    }));
+  async function updateSplit(billId) {
+    const bill = bills.find(b => b._id === billId);
+    const newTotal = Object.values(customSplits).reduce((sum, v) => sum + (parseFloat(v) || 0), 0);
+    const updatedShares = bill.shares.map(s => ({ ...s, amountOwed: parseFloat(customSplits[s._id]) || s.amountOwed }));
     setEditingSplit(false);
     setCustomSplits({});
-    // Add PUT /api/update/bill/:id
+    try {
+      await axios.put("http://localhost:7000/api/update/bill/" + billId, { _id: billId, totalAmount: newTotal, shares: updatedShares });
+      const res = await axios.get("http://localhost:7000/api/bill/household", { params: { householdId } });
+      setBills(res.data);
+    } catch (err) {
+      console.log(err);
+    }
   }
 
-  function addComment(billId) {
+  async function addComment(billId) {
     if (!newComment.trim()) return;
-    setBills(bills.map(bill => {
-      if (bill.id !== billId) return bill;
-      return { ...bill, comments: [...bill.comments, { author: "You", text: newComment.trim(), date: new Date().toLocaleDateString() }] };
-    }));
+    const bill = bills.find(b => b._id === billId);
+    const updatedComments = [...bill.comments, { author: "You", text: newComment.trim(), date: new Date().toLocaleDateString() }];
     setNewComment("");
-    // Add PUT /api/update/bill/:id (note: comments not in schema yet)
+    try {
+      await axios.put("http://localhost:7000/api/update/bill/" + billId, { _id: billId, comments: updatedComments });
+      const res = await axios.get("http://localhost:7000/api/bill/household", { params: { householdId } });
+      setBills(res.data);
+    } catch (err) {
+      console.log(err);
+    }
   }
 
   function openBill(bill) {
-    setSelectedBillId(bill.id);
+    setSelectedBillId(bill._id);
     setActiveRoommate(null);
     setEditingTotal(false);
     setEditingDueDate(false);
@@ -198,7 +226,7 @@ function Bills() {
               const paidCount = bill.shares.filter(s => s.isPaid).length;
               const daysLeft = bill.dueDate ? getDaysUntilDue(bill.dueDate) : null;
               return (
-                <div key={bill.id} className="billCard" onClick={() => openBill(bill)}>
+                <div key={bill._id} className="billCard" onClick={() => openBill(bill)}>
                   <div className="billCardHeader">
                     <div>
                       <h2>{bill.billName}</h2>
@@ -216,7 +244,7 @@ function Bills() {
                       <button
                         className="btnRed"
                         style={{ marginLeft: "10px" }}
-                        onClick={e => { e.stopPropagation(); deleteBill(bill.id); }}
+                        onClick={e => { e.stopPropagation(); deleteBill(bill._id); }}
                       >
                         Delete
                       </button>
@@ -234,7 +262,7 @@ function Bills() {
   // --- BILL DETAIL VIEW ---
   const daysLeft = selectedBill.dueDate ? getDaysUntilDue(selectedBill.dueDate) : null;
   const filteredShares = activeRoommate
-    ? selectedBill.shares.filter(s => s.id === activeRoommate)
+    ? selectedBill.shares.filter(s => s._id === activeRoommate)
     : selectedBill.shares;
 
   return (
@@ -271,10 +299,10 @@ function Bills() {
 
           {/* Shares */}
           {filteredShares.map(share => (
-            <div key={share.id} className={`shareRow ${share.isPaid ? "paid" : ""}`}>
-              <span>{share.name}</span>
+            <div key={share._id} className={`shareRow ${share.isPaid ? "paid" : ""}`}>
+              <span>Roommate</span>
               <span>${share.amountOwed.toFixed(2)}</span>
-              <button className={share.isPaid ? "btnOutline" : "btnGreen"} onClick={() => togglePaid(selectedBill.id, share.id)}>
+              <button className={share.isPaid ? "btnOutline" : "btnGreen"} onClick={() => togglePaid(selectedBill._id, share._id)}>
                 {share.isPaid ? "Paid ✓" : "Mark Paid"}
               </button>
             </div>
@@ -291,7 +319,7 @@ function Bills() {
               {editingTotal && (
                 <div style={{ marginTop: "8px" }}>
                   <input type="number" value={editTotalValue} onChange={e => setEditTotalValue(e.target.value)} min="0" step="0.01" />
-                  <button className="btnGreen" onClick={() => updateTotal(selectedBill.id)}>Save</button>
+                  <button className="btnGreen" onClick={() => updateTotal(selectedBill._id)}>Save</button>
                   {editTotalValue && <p className="splitPreview">New split: ${(parseFloat(editTotalValue) / ROOMMATES.length).toFixed(2)} each</p>}
                 </div>
               )}
@@ -304,7 +332,7 @@ function Bills() {
               {editingDueDate && (
                 <div style={{ marginTop: "8px" }}>
                   <input type="date" value={editDueDateValue} onChange={e => setEditDueDateValue(e.target.value)} />
-                  <button className="btnGreen" onClick={() => updateDueDate(selectedBill.id)}>Save</button>
+                  <button className="btnGreen" onClick={() => updateDueDate(selectedBill._id)}>Save</button>
                 </div>
               )}
             </div>
@@ -313,7 +341,7 @@ function Bills() {
               <button className="btnOutline" onClick={() => {
                 if (!editingSplit) {
                   const splits = {};
-                  selectedBill.shares.forEach(s => { splits[s.id] = s.amountOwed; });
+                  selectedBill.shares.forEach(s => { splits[s._id] = s.amountOwed; });
                   setCustomSplits(splits);
                 }
                 setEditingSplit(!editingSplit);
@@ -323,19 +351,19 @@ function Bills() {
               {editingSplit && (
                 <div style={{ marginTop: "8px" }}>
                   {selectedBill.shares.map(share => (
-                    <div key={share.id} style={{ marginBottom: "5px" }}>
-                      <label>{share.name}: $</label>
-                      <input type="number" value={customSplits[share.id] || ""} onChange={e => setCustomSplits({ ...customSplits, [share.id]: e.target.value })} min="0" step="0.01" />
+                    <div key={share._id} style={{ marginBottom: "5px" }}>
+                      <label>Roommate: $</label>
+                      <input type="number" value={customSplits[share._id] || ""} onChange={e => setCustomSplits({ ...customSplits, [share._id]: e.target.value })} min="0" step="0.01" />
                     </div>
                   ))}
                   <p className="splitPreview">New total: ${Object.values(customSplits).reduce((sum, v) => sum + (parseFloat(v) || 0), 0).toFixed(2)}</p>
-                  <button className="btnGreen" onClick={() => updateSplit(selectedBill.id)}>Save Split</button>
+                  <button className="btnGreen" onClick={() => updateSplit(selectedBill._id)}>Save Split</button>
                 </div>
               )}
             </div>
 
             <div className="actionBlock">
-              <button className="btnRed" onClick={() => deleteBill(selectedBill.id)}>Delete Bill</button>
+              <button className="btnRed" onClick={() => deleteBill(selectedBill._id)}>Delete Bill</button>
             </div>
           </div>
 
@@ -355,9 +383,9 @@ function Bills() {
                 value={newComment}
                 onChange={e => setNewComment(e.target.value)}
                 placeholder="Add a comment..."
-                onKeyDown={e => { if (e.key === "Enter") addComment(selectedBill.id); }}
+                onKeyDown={e => { if (e.key === "Enter") addComment(selectedBill._id); }}
               />
-              <button className="btnGreen" onClick={() => addComment(selectedBill.id)}>Post</button>
+              <button className="btnGreen" onClick={() => addComment(selectedBill._id)}>Post</button>
             </div>
           </div>
 
@@ -365,7 +393,7 @@ function Bills() {
           <div className="activitySection">
             <h3>Activity</h3>
             {selectedBill.shares.filter(s => s.isPaid).map(s => (
-              <p key={s.id} style={{ margin: "4px 0" }}>{s.name} paid ${s.amountOwed.toFixed(2)}</p>
+              <p key={s._id} style={{ margin: "4px 0" }}>Roommate paid ${s.amountOwed.toFixed(2)}</p>
             ))}
             {selectedBill.shares.every(s => !s.isPaid) && <p>No activity yet.</p>}
             {daysLeft !== null && daysLeft > 0 && daysLeft <= 7 && <p>Due date in {daysLeft} days</p>}
