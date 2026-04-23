@@ -296,7 +296,7 @@ input[type=text]{
   box-sizing: border-box;
   border: 3px solid #244F26;
   border-radius: 5px;
-  width: 300px;
+  width: 900px;
   padding: 12px;
   margin: 10px 0;
   margin-left: 75px;
@@ -304,8 +304,6 @@ input[type=text]{
 }
 
 .apartmentListWrapper {
-  display: flex;
-  flex-direction: column;
   width: 800px;
   height: 200px;
   margin-left: 150px;
@@ -313,10 +311,20 @@ input[type=text]{
   padding: 10px;
   border: 2px solid black;
   border-radius: 8px;
+  display: flex;
+}
+
+.apartmentListImage {
+  height: 200px;
+  height: 300px;
+  object-fit: cover;
+  margin-top: 10px;
 }
 
 .apartmentList {
-  float: right;
+  height: 200px;
+  width: 600px;
+  margin-left: 10px;
 }
 
 /* The switch - the box around the slider */
@@ -419,6 +427,62 @@ input:checked + .slider:before {
   border-radius: 50%;
   background: #244F26;
   cursor: pointer;
+}
+
+/* Apartment */
+
+.layoutApartment {
+  width: 100%;
+
+  display: grid;
+  grid:
+    "sidebarApartment bodyApartment" 1fr
+    / 50% 1fr;
+  gap: 8px;
+}
+
+.sidebarApartment { grid-area: sidebarApartment; }
+.bodyApartment { grid-area: bodyApartment; }
+
+.apartmentPageImage {
+  width: 600px;
+  height: 400px;
+}
+
+.apartmentPage {
+  margin-left: 100px;
+  margin-top: 10px;
+}
+
+.apartmentPage2 {
+  margin-left: 30px;
+  margin-top: 60px;
+}
+
+.containerApartment{
+  display: flex;
+  justify-content: center;
+  padding: 10px;
+  margin-right: 100px;
+  gap: 10px;
+}
+
+button{
+  background-color: #68B684;
+  font-size: 25px;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 10px;
+}
+
+button:hover {
+  background-color: #244F26;
+  font-size: 25px;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 10px;
 }
 
 /* Login/Signup */

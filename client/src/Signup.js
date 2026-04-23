@@ -14,6 +14,9 @@ function Signup(){
                     <label for = "lastname">Last Name: </label>
                     <input type = "text" placeholder="Enter last name." id="lastname" name="lastname"></input>
                     <br></br>
+                    <label for = "email">Email: </label>
+                    <input type = "text" placeholder="Enter email." id="email" name="email"></input>
+                    <br></br>
                     <label for = "username">Username: </label>
                     <input type = "text" placeholder="Enter username." id="username" name="username"></input>
                     <br></br>

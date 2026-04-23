@@ -10,23 +10,28 @@ function Search(){
             <div class="sidebarSearch">
                 <div class = "search">
                     <h1>Apartment Search</h1>
+                    <Link to = "/Apartment">Temp apartment page - make into full page, delete this link later</Link>
                 </div>
-                <input type="text" placeholder="Search"></input>
+                <input type="text" placeholder="Search" class = "search"></input>
                 <br></br>
                 <div class = "apartmentListWrapper"> {/* The wrapper is the box itself, contains all of the information. Duplicate this and the information in it per apartment*/}
+                    <div class = "apartmentListImage">
+                        <img src={require('.//images/apartment1.jpg')}/>
+                    </div>
                     <div class = "apartmentList"> {/* This is the actual apartment information, contained in the box*/}
-                        <p>testing</p> {/* Will update this layout later */}
-                        <h1>Apartment Name</h1>
+                        <h1>Apartment 1</h1> {/*Link container to Apartment */}
                         <p>desc</p>
-                        <p>sample photo somewhere</p>
+                        <p>more information</p>
                     </div>
                 </div>
                 <div class = "apartmentListWrapper">
-                    <div class = "apartmentList">
-                        <p>second apartment</p>
-                        <h1>Apartment Name 2</h1>
-                        <p>desc 2</p>
-                        <p>sample photo somewhere maybe</p>
+                    <div class = "apartmentListImage">
+                        <img src={require('.//images/apartment2.jpg')}/>
+                    </div>
+                    <div class = "apartmentList"> {/* This is the actual apartment information, contained in the box*/}
+                        <h1>Apartment 2</h1> {/* Link container to Apartment */}
+                        <p>desc</p>
+                        <p>more information</p>
                     </div>
                 </div>
             </div>

@@ -9,8 +9,10 @@ import Roommates from './Roommates';
 import Bills from './Bills';
 import Calendar from './Calendar';
 import Lists from './Lists';
+import List from './List';
 import Settings from './Settings';
 import ApartmentListing from './ApartmentListing';
+import Apartment from './Apartment';
 
 function App() {
   return (
@@ -34,8 +36,10 @@ function App() {
           <Route path = "/Bills" element = {<Bills/>}/>
           <Route path = "/Calendar" element = {<Calendar/>}/>
           <Route path = "/Lists" element = {<Lists/>}/>
+          <Route path = "/List" element = {<List/>}/>
           <Route path = "/Settings" element = {<Settings/>}/>
           <Route path = "/ApartmentListing" element = {<ApartmentListing/>}/>
+          <Route path = "/Apartment" element = {<Apartment/>}/>
       </Routes>
     </BrowserRouter>
   );
