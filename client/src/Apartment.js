@@ -1,7 +1,12 @@
 import { Link } from "react-router-dom";
-import React from "react";
+import React, { useEffect, useState } from "react";
 
 function Apartment(){
+    const [isFilled, setIsFilled] = useState(false);
+
+    useEffect(() => {
+        setIsFilled(localStorage.getItem("apartment1Filled") === "true");
+    }, []);
 
     return (
         <>
@@ -14,9 +19,10 @@ function Apartment(){
                 <div className="containerApartment">
                     <div></div>
                     <button>Save</button>
-                    <button>Message</button>
-                    <button>Apply</button>
+                    <button disabled={isFilled}>Message</button>
+                    <button disabled={isFilled}>Apply</button>
                 </div>
+                {isFilled && <p className="closedListingNotice">This listing is filled and no longer accepting inquiries.</p>}
                 </div>
             </div>
             <div className="bodyApartment">
