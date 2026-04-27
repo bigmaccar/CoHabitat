@@ -4,7 +4,7 @@ const createListing = async(req, res) => {
     try{
             const newListing = new Listing(req.body);
             const savedData = await newListing.save();
-            res.status(200).json({message: "Listing created successfully"});
+            res.status(200).json(savedData);
     } catch (error){
         res.status(500).json({errorMessage:error.message})
     }
@@ -12,12 +12,12 @@ const createListing = async(req, res) => {
 
 const getAllListings = async(req, res) =>{
     try{
-         const id = req.body._id;
-         const listingExist = await Listing.findById(id);
-         if (!listingExist){
-            return res.status(404).json({message: "Listing not found."});
+         const filters = {};
+         if (req.query.listingKey) {
+            filters.listingKey = req.query.listingKey;
          }
-         res.status(200).json(listingExist);
+         const listingData = await Listing.find(filters).sort({ createdAt: -1 });
+         res.status(200).json(listingData);
     }catch (error){
         res.status(500).json({errorMessage: error.message});
     }
@@ -38,15 +38,15 @@ const getListingById = async(req, res) =>{
 
 const updateListing = async(req, res)=>{
     try{
-        const id = req.body._id;
-         const listingExist = await Listing.findById(id);
-         if (!listingExist){
-            return res.status(404).json({message: "Listing not found."});
-         }
-         const updatedData = await Listing.findByIdAndUpdate(id, req.body, {
-            new:true
-         });
-         res.status(200).json({message: "Listing Updated Successfully"});
+        const id = req.body._id || req.params.id;
+        const updateOptions = {
+            new: true,
+            upsert: true,
+            setDefaultsOnInsert: true
+        };
+        const query = req.body.listingKey ? { listingKey: req.body.listingKey } : { _id: id };
+        const updatedData = await Listing.findOneAndUpdate(query, req.body, updateOptions);
+        res.status(200).json(updatedData);
     }catch(error){
         res.status(500).json({errorMessage: error.message});
     }

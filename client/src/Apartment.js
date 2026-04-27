@@ -4,6 +4,7 @@ import axios from "axios";
 
 const LISTING_NAME = "Apartment 1";
 const LISTER_NAME = "Apartment 1 Lister";
+const LISTING_KEY = "apartment-1";
 
 function Apartment(){
     const [isFilled, setIsFilled] = useState(false);
@@ -14,9 +15,22 @@ function Apartment(){
     const [messageError, setMessageError] = useState("");
 
     useEffect(() => {
-        setIsFilled(localStorage.getItem("apartment1Filled") === "true");
+        fetchListingStatus();
         fetchMessages();
     }, []);
+
+    async function fetchListingStatus() {
+        try {
+            const res = await axios.get("http://localhost:7000/api/listings", {
+                params: { listingKey: LISTING_KEY }
+            });
+            if (res.data.length > 0) {
+                setIsFilled(res.data[0].isActive === false);
+            }
+        } catch (err) {
+            setMessageError(err.response?.data?.errorMessage || "Listing status could not be loaded.");
+        }
+    }
 
     async function fetchMessages() {
         const userId = localStorage.getItem("userId");

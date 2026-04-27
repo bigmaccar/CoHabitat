@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import React, { useEffect, useState } from "react";
+import axios from "axios";
 
 const apartments = [
     {
@@ -22,22 +23,60 @@ const apartments = [
 
 function Search(){
     const [savedListings, setSavedListings] = useState([]);
+    const [savedError, setSavedError] = useState("");
 
     useEffect(() => {
-        const storedListings = JSON.parse(localStorage.getItem("savedListings") || "[]");
-        setSavedListings(storedListings);
+        fetchSavedListings();
     }, []);
 
-    function toggleSavedListing(apartmentId) {
-        const updatedListings = savedListings.includes(apartmentId)
-            ? savedListings.filter(id => id !== apartmentId)
-            : [...savedListings, apartmentId];
+    async function fetchSavedListings() {
+        const userId = localStorage.getItem("userId");
+        if (!userId) {
+            return;
+        }
 
-        setSavedListings(updatedListings);
-        localStorage.setItem("savedListings", JSON.stringify(updatedListings));
+        try {
+            const res = await axios.get("http://localhost:7000/api/savedListings", {
+                params: { userId }
+            });
+            setSavedListings(res.data);
+            setSavedError("");
+        } catch (err) {
+            setSavedError(err.response?.data?.errorMessage || "Saved listings could not be loaded.");
+        }
     }
 
-    const savedApartmentDetails = apartments.filter(apartment => savedListings.includes(apartment.id));
+    async function toggleSavedListing(apartment) {
+        const userId = localStorage.getItem("userId");
+        if (!userId) {
+            setSavedError("You must be logged in to save listings.");
+            return;
+        }
+
+        try {
+            if (savedListings.some(savedListing => savedListing.listingKey === apartment.id)) {
+                await axios.delete("http://localhost:7000/api/delete/savedListing/" + apartment.id, {
+                    params: {
+                        userId,
+                        listingKey: apartment.id
+                    }
+                });
+            } else {
+                await axios.post("http://localhost:7000/api/savedListing", {
+                    userId,
+                    listingKey: apartment.id,
+                    listingName: apartment.name,
+                    listingLocation: apartment.location,
+                    listingRent: apartment.rent
+                });
+            }
+            fetchSavedListings();
+        } catch (err) {
+            setSavedError(err.response?.data?.errorMessage || "Saved listing could not be updated.");
+        }
+    }
+
+    const savedListingKeys = savedListings.map(savedListing => savedListing.listingKey);
 
     return (
         <section className="layoutSearch">
@@ -58,8 +97,8 @@ function Search(){
                             <p>{apartment.description}</p>
                             <p>{apartment.location}</p>
                             <p>{apartment.rent}</p>
-                            <button onClick={() => toggleSavedListing(apartment.id)}>
-                                {savedListings.includes(apartment.id) ? "Unsave" : "Save"}
+                            <button onClick={() => toggleSavedListing(apartment)}>
+                                {savedListingKeys.includes(apartment.id) ? "Unsave" : "Save"}
                             </button>
                         </div>
                     </div>
@@ -68,14 +107,15 @@ function Search(){
             <div className="bodySearch">
                 <div className="filters">
                     <h2>Saved Listings</h2>
-                    {savedApartmentDetails.length === 0 ? (
+                    {savedError && <p>{savedError}</p>}
+                    {savedListings.length === 0 ? (
                         <p>No saved listings yet.</p>
                     ) : (
-                        savedApartmentDetails.map(apartment => (
-                            <div key={apartment.id}>
-                                <h3>{apartment.name}</h3>
-                                <p>{apartment.location}</p>
-                                <p>{apartment.rent}</p>
+                        savedListings.map(savedListing => (
+                            <div key={savedListing._id}>
+                                <h3>{savedListing.listingName}</h3>
+                                <p>{savedListing.listingLocation}</p>
+                                <p>{savedListing.listingRent}</p>
                             </div>
                         ))
                     )}

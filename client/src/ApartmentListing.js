@@ -1,16 +1,44 @@
 import { Link } from "react-router-dom";
 import React, { useEffect, useState } from "react";
+import axios from "axios";
+
+const LISTING_KEY = "apartment-1";
+const LISTING_NAME = "Apartment 1";
 
 function ApartmentListing(){
     const [isFilled, setIsFilled] = useState(false);
+    const [statusError, setStatusError] = useState("");
 
     useEffect(() => {
-        setIsFilled(localStorage.getItem("apartment1Filled") === "true");
+        fetchListingStatus();
     }, []);
 
-    function updateListingStatus(filledStatus) {
-        setIsFilled(filledStatus);
-        localStorage.setItem("apartment1Filled", filledStatus.toString());
+    async function fetchListingStatus() {
+        try {
+            const res = await axios.get("http://localhost:7000/api/listings", {
+                params: { listingKey: LISTING_KEY }
+            });
+            if (res.data.length > 0) {
+                setIsFilled(res.data[0].isActive === false);
+            }
+            setStatusError("");
+        } catch (err) {
+            setStatusError(err.response?.data?.errorMessage || "Listing status could not be loaded.");
+        }
+    }
+
+    async function updateListingStatus(filledStatus) {
+        try {
+            await axios.put("http://localhost:7000/api/update/listing/" + LISTING_KEY, {
+                listingKey: LISTING_KEY,
+                apartmentName: LISTING_NAME,
+                isActive: !filledStatus
+            });
+            setIsFilled(filledStatus);
+            setStatusError("");
+        } catch (err) {
+            setStatusError(err.response?.data?.errorMessage || "Listing status could not be updated.");
+        }
     }
 
     return (
@@ -64,6 +92,7 @@ function ApartmentListing(){
                         <div className="listingStatusCard">
                             <h3>Listing Status</h3>
                             <p>{isFilled ? "Filled - inquiries are closed." : "Open - accepting inquiries."}</p>
+                            {statusError && <p>{statusError}</p>}
                             <button onClick={() => updateListingStatus(true)} disabled={isFilled}>Mark as Filled</button>
                             <button onClick={() => updateListingStatus(false)} disabled={!isFilled}>Reopen Listing</button>
                         </div>

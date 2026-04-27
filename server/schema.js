@@ -36,9 +36,11 @@ const ListingSchema = new Schema({
   householdId: { type: Schema.Types.ObjectId, ref: "Household" },
   createdBy: { type: Schema.Types.ObjectId, ref: "User" },
 
+  listingKey: String,
+  apartmentName: String,
   description: String,
   rentAmount: Number,
-  isActive: Boolean,
+  isActive: { type: Boolean, default: true },
 
   photos: [
     {
@@ -51,7 +53,11 @@ const ListingSchema = new Schema({
 
 const SavedListingSchema = new Schema({
   userId: { type: Schema.Types.ObjectId, ref: "User" },
-  listingId: { type: Schema.Types.ObjectId, ref: "Listing" }
+  listingId: { type: Schema.Types.ObjectId, ref: "Listing" },
+  listingKey: String,
+  listingName: String,
+  listingLocation: String,
+  listingRent: String
 }, { timestamps: true, collection: "SavedListing" });
 
 const MessageSchema = new Schema({
