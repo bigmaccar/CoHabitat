@@ -8,7 +8,7 @@ function TenantProfile(){
             <div className="sidebarApartment">
                 <div className="apartmentPage">
                     <Link to="/Apartment">Back to Apartment</Link>
-                    <h1>Maya Chen</h1>
+                    <h1>Tenant 1</h1>
                     <img src={require("./images/person.png")} className="tenantProfileImage" alt="Tenant profile"/>
                 </div>
             </div>

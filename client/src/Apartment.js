@@ -31,7 +31,7 @@ function Apartment(){
                     <p>Two bedroom apartment near campus with shared kitchen, living room, and laundry access.</p>
                     <h2>Current Tenants</h2>
                     <div className="tenantCard">
-                        <h3>Maya Chen</h3>
+                        <h3>Tenant 1</h3>
                         <p><strong>Role:</strong> Current tenant</p>
                         <p><strong>Lifestyle:</strong> Quiet, clean, studies at home during the week.</p>
                         <p><strong>Looking for:</strong> A roommate who respects shared spaces and communicates clearly.</p>
