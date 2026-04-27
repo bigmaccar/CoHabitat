@@ -12,12 +12,9 @@ const createEvent = async(req, res) => {
 
 const getAllEventsByHouseholdId = async(req, res) =>{
     try{
-         const id = req.body._id;
-         const eventExist = await CalendarEvent.findById(id);
-         if (!eventExist){
-            return res.status(404).json({message: "Calendar Event not found."});
-         }
-         res.status(200).json(eventExist);
+         const householdId = req.query.householdId;
+         const events = await CalendarEvent.find({ householdId });
+         res.status(200).json(events);
     }catch (error){
         res.status(500).json({errorMessage: error.message});
     }
@@ -54,7 +51,7 @@ const updateEvent = async(req, res)=>{
 
 const deleteEvent = async(req, res)=>{
     try{
-        const id = req.body._id;
+        const id = req.params.id;
          const eventExist = await CalendarEvent.findById(id);
          if (!eventExist){
             return res.status(404).json({message: "Calendar Event not found."});

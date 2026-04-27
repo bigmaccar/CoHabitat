@@ -89,8 +89,11 @@ const CalendarEventSchema = new Schema({
   createdBy: { type: Schema.Types.ObjectId, ref: "User" },
 
   title: String,
+  description: String,
+  type: String,
   startDateTime: Date,
-  endDateTime: Date
+  endDateTime: Date,
+  peopleOver: Boolean
 }, { timestamps: true, collection: "CalendarEvent" });
 
 const ChoreSchema = new Schema({

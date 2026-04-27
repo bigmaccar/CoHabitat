@@ -1,4 +1,4 @@
-const {Chore} = require("../schema.js");
+const {Chore, CalendarEvent} = require("../schema.js");
 
 const createChore = async(req, res) => {
     try{
@@ -25,8 +25,8 @@ const getChoreById = async(req, res) =>{
 
 const getAllChoresByHousehold = async(req, res) =>{
     try{
-         const id = req.body._id;
-         const choreExist = await Chore.findById(id);
+         const householdId = req.query.householdId
+         const events = await CalendarEvent.find({householdId})
          if (!choreExist){
             return res.status(404).json({message: "Chore not found."});
          }
@@ -54,7 +54,7 @@ const updateChore = async(req, res)=>{
 
 const deleteChore = async(req, res)=>{
     try{
-        const id = req.body._id;
+        const id = req.parms.id;
          const choreExist = await Chore.findById(id);
          if (!choreExist){
             return res.status(404).json({message: "Chore not found."});
