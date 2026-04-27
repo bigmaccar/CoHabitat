@@ -1,18 +1,17 @@
-import { BrowserRouter, Link, Routes, Route, Navigate } from "react-router-dom";
-import React, {useState, useEffect} from "react";
-import axios from 'axios';
+import { Link } from "react-router-dom";
+import React from "react";
 
 function Apartment(){
 
     return (
         <>
-        <section class="layoutApartment">
-            <div class="sidebarApartment">
-                <div class = "apartmentPage">
-                    <Link to = "/Search">Back to Search</Link>
+        <section className="layoutApartment">
+            <div className="sidebarApartment">
+                <div className="apartmentPage">
+                    <Link to="/Search">Back to Search</Link>
                     <h1>Apartment 1</h1>
-                <img src={require('.//images/apartment1.jpg')} class = "apartmentPageImage"/>
-                <div class = "containerApartment">
+                <img src={require("./images/apartment1.jpg")} className="apartmentPageImage" alt="Apartment 1"/>
+                <div className="containerApartment">
                     <div></div>
                     <button>Save</button>
                     <button>Message</button>
@@ -20,10 +19,18 @@ function Apartment(){
                 </div>
                 </div>
             </div>
-            <div class="bodyApartment">
-               <div class = "apartmentPage2">
+            <div className="bodyApartment">
+               <div className="apartmentPage2">
                     <h1>Information</h1>
-                    <p>info, add desc here</p>
+                    <p>Two bedroom apartment near campus with shared kitchen, living room, and laundry access.</p>
+                    <h2>Current Tenants</h2>
+                    <div className="tenantCard">
+                        <h3>Maya Chen</h3>
+                        <p><strong>Role:</strong> Current tenant</p>
+                        <p><strong>Lifestyle:</strong> Quiet, clean, studies at home during the week.</p>
+                        <p><strong>Looking for:</strong> A roommate who respects shared spaces and communicates clearly.</p>
+                        <Link to="/TenantProfile">View Tenant Profile</Link>
+                    </div>
                 </div>
             </div>
         </section></>

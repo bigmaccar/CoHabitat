@@ -13,6 +13,7 @@ import List from './List';
 import Settings from './Settings';
 import ApartmentListing from './ApartmentListing';
 import Apartment from './Apartment';
+import TenantProfile from './TenantProfile';
 
 function ProtectedRoute({ children }) {
   const userId = localStorage.getItem("userId");
@@ -46,6 +47,7 @@ function App() {
           <Route path = "/Settings" element = {<ProtectedRoute><Settings/></ProtectedRoute>}/>
           <Route path = "/ApartmentListing" element = {<ProtectedRoute><ApartmentListing/></ProtectedRoute>}/>
           <Route path = "/Apartment" element = {<ProtectedRoute><Apartment/></ProtectedRoute>}/>
+          <Route path = "/TenantProfile" element = {<ProtectedRoute><TenantProfile/></ProtectedRoute>}/>
       </Routes>
     </BrowserRouter>
   );
