@@ -57,6 +57,8 @@ const SavedListingSchema = new Schema({
 const MessageSchema = new Schema({
   senderId: { type: Schema.Types.ObjectId, ref: "User" },
   receiverId: { type: Schema.Types.ObjectId, ref: "User" },
+  receiverName: String,
+  listingName: String,
   messageText: String
 }, { timestamps: true, collection: "Message" });
 
