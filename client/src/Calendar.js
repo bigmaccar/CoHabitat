@@ -8,6 +8,8 @@ function Calendar(){
     const [currentYear, setCurrentYear] = useState(today.getFullYear());
     const [events, setEvents] = useState([]);
     const [showForm, setShowForm] = useState(false);
+    const [selectedDay, setSelectedDay] = useState(null);
+    const [submitting, setSubmitting] = useState(false);
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
     const [type, setType] = useState("");
@@ -15,8 +17,19 @@ function Calendar(){
     const [endDateTime, setEndDateTime] = useState("");
     const [peopleOver, setPeopleOver] = useState(false);
 
+    async function handleDeleteEvent(id) {
+        try {
+            await axios.delete(`http://localhost:7000/api/delete/event/${id}`);
+            setEvents(prev => prev.filter(event => event._id !== id));
+        } catch (err) {
+            console.log(err);
+        }
+    }
+
     async function handleCreateEvent(e) {
         e.preventDefault();
+        if (submitting) return;
+        setSubmitting(true);
         const householdId = localStorage.getItem("householdId");
         const createdBy = localStorage.getItem("userId");
         try {
@@ -44,6 +57,7 @@ function Calendar(){
         } catch (err) {
             console.log(err);
         }
+        setSubmitting(false);
     }
 
     useEffect(() => {
@@ -105,9 +119,40 @@ function Calendar(){
                             <label>People over? </label>
                             <input type="checkbox" checked={peopleOver} onChange={e => setPeopleOver(e.target.checked)} /><br/><br/>
 
-                            <input type="submit" value="Create Event" />
+                            <input type="submit" value="Create Event" disabled={submitting} />
                             <button type="button" onClick={() => setShowForm(false)} style={{marginLeft: 10}}>Cancel</button>
                         </form>
+                    </div>
+                ) : selectedDay ? (
+                    <div style={{padding: 40}}>
+                        <button onClick={() => setSelectedDay(null)}>← Back</button>
+                        <h2 style={{marginTop: 16}}>{selectedDay.toLocaleDateString('default', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</h2>
+                        {events.filter(event => {
+                            const start = new Date(event.startDateTime);
+                            const end = event.endDateTime ? new Date(event.endDateTime) : start;
+                            const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+                            const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+                            return selectedDay >= startDay && selectedDay <= endDay;
+                        }).length === 0 ? (
+                            <p>No events this day.</p>
+                        ) : (
+                            events.filter(event => {
+                                const start = new Date(event.startDateTime);
+                                const end = event.endDateTime ? new Date(event.endDateTime) : start;
+                                const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+                                const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+                                return selectedDay >= startDay && selectedDay <= endDay;
+                            }).map(event => (
+                                <div key={event._id} style={{borderLeft: '4px solid #68B684', padding: '8px 16px', marginTop: 12}}>
+                                    <strong>{event.title}</strong>
+                                    <p style={{margin: '4px 0', fontSize: 14}}>
+                                        {new Date(event.startDateTime).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}
+                                        {event.endDateTime && ` – ${new Date(event.endDateTime).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}`}
+                                    </p>
+                                    {event.description && <p style={{margin: 0, fontSize: 14, color: '#555'}}>{event.description}</p>}
+                                </div>
+                            ))
+                        )}
                     </div>
                 ) : (
                 <div style={{padding: 40}}>
@@ -126,12 +171,12 @@ function Calendar(){
                         }}>{">"}</button>
                     </div>
 
-                    {/* Day labels */}
                     <div style={{display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', textAlign: 'center', fontWeight: 'bold'}}>
                         {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d => <div key={d}>{d}</div>)}
                     </div>
 
-                    {/* Grid cells */}
+
+                    
                     <div style={{display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4}}>
                         {Array(new Date(currentYear, currentMonth, 1).getDay()).fill(null).map((_, i) => (
                             <div key={'empty-' + i}></div>
@@ -139,17 +184,20 @@ function Calendar(){
                         {Array(new Date(currentYear, currentMonth + 1, 0).getDate()).fill(null).map((_, i) => {
                             const dayNum = i + 1;
                             const dayEvents = events.filter(event => {
-                                const d = new Date(event.startDateTime);
-                                return d.getUTCFullYear() === currentYear &&
-                                       d.getUTCMonth() === currentMonth &&
-                                       d.getUTCDate() === dayNum;
+                                const start = new Date(event.startDateTime);
+                                const end = event.endDateTime ? new Date(event.endDateTime) : start;
+                                const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+                                const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+                                const thisDay = new Date(currentYear, currentMonth, dayNum);
+                                return thisDay >= startDay && thisDay <= endDay;
                             });
                             return (
-                                <div key={dayNum} style={{border: '1px solid #ccc', minHeight: 80, padding: 4}}>
+                                <div key={dayNum} onClick={() => setSelectedDay(new Date(currentYear, currentMonth, dayNum))} style={{border: '1px solid #ccc', minHeight: 80, padding: 4, cursor: 'pointer'}}>
                                     <strong>{dayNum}</strong>
                                     {dayEvents.map(event => (
-                                        <div key={event._id} style={{backgroundColor: '#68B684', color: 'white', borderRadius: 4, padding: '2px 4px', marginTop: 2, fontSize: 12}}>
-                                            {event.title}
+                                        <div key={event._id} style={{backgroundColor: '#68B684', color: 'white', borderRadius: 4, padding: '2px 4px', marginTop: 2, fontSize: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                                            <span>{event.title}</span>
+                                            <span onClick={e => { e.stopPropagation(); handleDeleteEvent(event._id); }} style={{cursor: 'pointer', marginLeft: 6}}>×</span>
                                         </div>
                                     ))}
                                 </div>
