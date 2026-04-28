@@ -98,6 +98,9 @@ function Settings() {
                         <button className="btnGreen" type="submit">Create</button>
                     </form>
                 )}
+
+                <Link to="/SubmitTicket" style={{ fontSize: 20 }}>Submit a Ticket</Link>
+
             </div>
         </section>
     );

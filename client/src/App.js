@@ -14,6 +14,11 @@ import Settings from './Settings';
 import ApartmentListing from './ApartmentListing';
 import Apartment from './Apartment';
 import TenantProfile from './TenantProfile';
+import AdminHome from './AdminHome';
+import Tickets from './Tickets';
+import AllUsers from './AllUsers';
+import AllHouseholds from './AllHouseholds';
+import SubmitTicket from './SubmitTicket';
 
 function ProtectedRoute({ children }) {
   const userId = localStorage.getItem("userId");
@@ -48,6 +53,11 @@ function App() {
           <Route path = "/ApartmentListing" element = {<ProtectedRoute><ApartmentListing/></ProtectedRoute>}/>
           <Route path = "/Apartment" element = {<ProtectedRoute><Apartment/></ProtectedRoute>}/>
           <Route path = "/TenantProfile" element = {<ProtectedRoute><TenantProfile/></ProtectedRoute>}/>
+          <Route path = "/AdminHome" element = {<ProtectedRoute><AdminHome/></ProtectedRoute>}/>
+          <Route path = "/AllUsers" element = {<ProtectedRoute><AllUsers/></ProtectedRoute>}/>
+          <Route path = "/Tickets" element = {<ProtectedRoute><Tickets/></ProtectedRoute>}/>
+          <Route path = "/AllHouseholds" element = {<ProtectedRoute><AllHouseholds/></ProtectedRoute>}/>
+          <Route path = "/SubmitTicket" element = {<ProtectedRoute><SubmitTicket/></ProtectedRoute>}/>
       </Routes>
     </BrowserRouter>
   );

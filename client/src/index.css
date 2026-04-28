@@ -236,6 +236,26 @@ progress::-moz-progress-bar {
   float: right;
 }
 
+/* TICKETS */
+
+.ticketsWrapper {
+  display: flex;
+  flex-direction: column;
+  width: 300px;
+  height: 300px;
+  margin-left: 40px;
+  margin-bottom: 10px;
+  margin-top: 10px;
+  padding: 10px;
+  border: 2px solid black;
+  border-radius: 8px;
+}
+
+.ticket {
+  float: right;
+  list-style: none;
+}
+
 /* APARTMENT LISTING */
 
 .apartmentInfo {
