@@ -839,3 +839,16 @@ input[type=submit]:hover {
   border-top: 2px solid #eee;
   padding-top: 16px;
 }
+
+/* BILLS - remaining amount */
+
+.remainingAmount {
+  margin-left: 8px;
+  color: #244F26;
+}
+
+.remainingPaid {
+  margin-left: 8px;
+  color: #27ae60;
+  font-weight: bold;
+}

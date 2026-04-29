@@ -64,6 +64,10 @@ function Bills() {
     fetchBills();
   }, []);
 
+  function getRemainingAmount(bill) {
+    return bill.shares.filter(s => !s.isPaid).reduce((sum, s) => sum + s.amountOwed, 0);
+  }
+
   function getDaysUntilDue(dueDate) {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -225,6 +229,7 @@ function Bills() {
             {bills.map(bill => {
               const paidCount = bill.shares.filter(s => s.isPaid).length;
               const daysLeft = bill.dueDate ? getDaysUntilDue(bill.dueDate) : null;
+              const remaining = getRemainingAmount(bill);
               return (
                 <div key={bill._id} className="billCard" onClick={() => openBill(bill)}>
                   <div className="billCardHeader">
@@ -232,6 +237,11 @@ function Bills() {
                       <h2>{bill.billName}</h2>
                       <div className="billMeta">
                         <span>Total: ${bill.totalAmount.toFixed(2)}</span>
+                        {remaining < bill.totalAmount && (
+                          <span className={remaining === 0 ? "remainingPaid" : "remainingAmount"}>
+                            · Remaining: ${remaining.toFixed(2)}
+                          </span>
+                        )}
                         {daysLeft !== null && (
                           <span className={daysLeft <= 0 ? "overdue" : ""}>
                             {daysLeft > 0 ? `  ·  Due in ${daysLeft} days` : daysLeft === 0 ? "  ·  Due today" : `  ·  Overdue by ${Math.abs(daysLeft)} days`}
@@ -261,6 +271,7 @@ function Bills() {
 
   // --- BILL DETAIL VIEW ---
   const daysLeft = selectedBill.dueDate ? getDaysUntilDue(selectedBill.dueDate) : null;
+  const remaining = getRemainingAmount(selectedBill);
   const filteredShares = activeRoommate
     ? selectedBill.shares.filter(s => s._id === activeRoommate)
     : selectedBill.shares;
@@ -279,6 +290,11 @@ function Bills() {
             <h2>{selectedBill.billName}</h2>
             <div className="billMeta">
               <span>Total: ${selectedBill.totalAmount.toFixed(2)}</span>
+              {remaining < selectedBill.totalAmount && (
+                <span className={remaining === 0 ? "remainingPaid" : "remainingAmount"}>
+                  · {remaining === 0 ? "Fully Paid ✓" : `Remaining: $${remaining.toFixed(2)}`}
+                </span>
+              )}
               {daysLeft !== null && (
                 <span className={daysLeft <= 0 ? "overdue" : ""}>
                   {daysLeft > 0 ? `  ·  Due in ${daysLeft} days` : daysLeft === 0 ? "  ·  Due today" : `  ·  Overdue by ${Math.abs(daysLeft)} days`}
