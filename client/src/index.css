@@ -541,6 +541,16 @@ input:checked + .slider:before {
   margin: 10px 0;
 }
 
+.messageListerForm select {
+  box-sizing: border-box;
+  display: block;
+  border: 3px solid #244F26;
+  border-radius: 5px;
+  width: 100%;
+  padding: 10px;
+  margin: 10px 0;
+}
+
 .messageSentNotice {
   color: #244F26;
   font-weight: bold;
@@ -567,6 +577,156 @@ input:checked + .slider:before {
 
 .sentMessage p {
   margin: 0 0 6px 0;
+}
+
+.messagePage {
+  padding: 20px;
+}
+
+.messageColumns {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.messagePanel {
+  border: 2px solid #244F26;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  padding: 15px;
+  width: 420px;
+  background-color: #FDFDFF;
+}
+
+.supportComposer {
+  width: 720px;
+}
+
+.messagePanel textarea,
+.messageCard textarea,
+.chatReplyForm textarea {
+  box-sizing: border-box;
+  display: block;
+  border: 3px solid #244F26;
+  border-radius: 5px;
+  width: 100%;
+  min-height: 90px;
+  padding: 10px;
+  margin: 10px 0;
+}
+
+.chatLayout {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: 20px;
+  max-width: 980px;
+}
+
+.threadList {
+  border: 2px solid #244F26;
+  border-radius: 8px;
+  padding: 15px;
+  background-color: #FDFDFF;
+}
+
+.threadButton {
+  display: block;
+  width: 100%;
+  margin-bottom: 10px;
+  font-size: 18px;
+  text-align: left;
+}
+
+.threadItem {
+  margin-bottom: 12px;
+}
+
+.smallChatButton {
+  margin-right: 6px;
+  padding: 6px 8px;
+  font-size: 14px;
+}
+
+.smallChatButton:hover {
+  padding: 6px 8px;
+  font-size: 14px;
+}
+
+.deleteChatButton {
+  background-color: #c0392b;
+}
+
+.deleteChatButton:hover {
+  background-color: #7b241c;
+}
+
+.activeThread {
+  background-color: #244F26;
+}
+
+.chatWindow {
+  border: 2px solid #244F26;
+  border-radius: 8px;
+  padding: 15px;
+  min-height: 460px;
+  background-color: #FDFDFF;
+}
+
+.chatBubble {
+  border-radius: 12px;
+  margin-bottom: 12px;
+  max-width: 70%;
+  padding: 12px;
+}
+
+.chatBubble p {
+  margin: 0 0 6px 0;
+}
+
+.incomingBubble {
+  border: 2px solid #68B684;
+  background-color: white;
+}
+
+.outgoingBubble {
+  border: 2px solid #244F26;
+  margin-left: auto;
+  background-color: #e6f4ea;
+}
+
+.systemBubble {
+  border: 2px solid #777;
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center;
+  background-color: #f1f1f1;
+}
+
+.chatReplyForm {
+  margin-top: 20px;
+}
+
+.closedChatNotice {
+  color: #244F26;
+  font-weight: bold;
+  text-align: center;
+}
+
+.endChatButton {
+  margin-top: 10px;
+  background-color: #c0392b;
+}
+
+.endChatButton:hover {
+  background-color: #7b241c;
+}
+
+.messageCard {
+  border: 2px solid #68B684;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  padding: 12px;
+  background-color: white;
 }
 
 button:disabled {

@@ -62,10 +62,15 @@ const SavedListingSchema = new Schema({
 
 const MessageSchema = new Schema({
   senderId: { type: Schema.Types.ObjectId, ref: "User" },
+  senderName: String,
   receiverId: { type: Schema.Types.ObjectId, ref: "User" },
   receiverName: String,
   listingName: String,
-  messageText: String
+  messageText: String,
+  isSupportMessage: { type: Boolean, default: false },
+  supportChatId: String,
+  startsSupportChat: { type: Boolean, default: false },
+  isSupportChatEnded: { type: Boolean, default: false }
 }, { timestamps: true, collection: "Message" });
 
 const BillSchema = new Schema({

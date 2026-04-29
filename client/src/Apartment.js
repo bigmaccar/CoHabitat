@@ -8,6 +8,8 @@ const LISTING_KEY = "apartment-1";
 
 function Apartment(){
     const [isFilled, setIsFilled] = useState(false);
+    const [users, setUsers] = useState([]);
+    const [selectedReceiverId, setSelectedReceiverId] = useState("");
     const [showMessageForm, setShowMessageForm] = useState(false);
     const [messageText, setMessageText] = useState("");
     const [messageSent, setMessageSent] = useState(false);
@@ -17,7 +19,22 @@ function Apartment(){
     useEffect(() => {
         fetchListingStatus();
         fetchMessages();
+        fetchUsers();
     }, []);
+
+    async function fetchUsers() {
+        const userId = localStorage.getItem("userId");
+        try {
+            const res = await axios.get("http://localhost:7000/api/users");
+            const otherUsers = res.data.filter(user => user._id !== userId);
+            setUsers(otherUsers);
+            if (otherUsers.length > 0) {
+                setSelectedReceiverId(otherUsers[0]._id);
+            }
+        } catch (err) {
+            setMessageError(err.response?.data?.errorMessage || "Users could not be loaded.");
+        }
+    }
 
     async function fetchListingStatus() {
         try {
@@ -55,11 +72,15 @@ function Apartment(){
     async function handleMessageSubmit(e) {
         e.preventDefault();
         const userId = localStorage.getItem("userId");
+        const senderName = localStorage.getItem("userName") || "User";
+        const selectedReceiver = users.find(user => user._id === selectedReceiverId);
 
         try {
             await axios.post("http://localhost:7000/api/message", {
                 senderId: userId,
-                receiverName: LISTER_NAME,
+                senderName,
+                receiverId: selectedReceiverId || undefined,
+                receiverName: selectedReceiver ? `${selectedReceiver.firstName || ""} ${selectedReceiver.lastName || ""}`.trim() || selectedReceiver.email : LISTER_NAME,
                 listingName: LISTING_NAME,
                 messageText
             });
@@ -90,7 +111,20 @@ function Apartment(){
                 {isFilled && <p className="closedListingNotice">This listing is filled and no longer accepting inquiries.</p>}
                 {showMessageForm && !isFilled && (
                     <form className="messageListerForm" onSubmit={handleMessageSubmit}>
-                        <label htmlFor="messageText">Message Lister</label>
+                        <label htmlFor="receiverId">Message Lister</label>
+                        <select
+                            id="receiverId"
+                            value={selectedReceiverId}
+                            onChange={e => setSelectedReceiverId(e.target.value)}
+                            required
+                        >
+                            {users.map(user => (
+                                <option key={user._id} value={user._id}>
+                                    {`${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email}
+                                </option>
+                            ))}
+                        </select>
+                        <label htmlFor="messageText">Message</label>
                         <textarea
                             id="messageText"
                             value={messageText}

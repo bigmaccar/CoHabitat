@@ -2,6 +2,8 @@ import { Link, useNavigate } from "react-router-dom";
 import React, { useState } from "react";
 import axios from 'axios';
 
+const SUPPORT_EMAIL = "support@gmail.com";
+
 function Login() {
     const navigate = useNavigate();
     const [email, setEmail] = useState("");
@@ -14,11 +16,13 @@ function Login() {
             const res = await axios.post("http://localhost:7000/api/login", { email, password });
             const user = res.data.user;
             localStorage.setItem("userId", user._id);
+            localStorage.setItem("userName", `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email);
+            localStorage.setItem("userEmail", user.email);
             localStorage.removeItem("householdId");
             if (user.households && user.households.length > 0) {
                 localStorage.setItem("householdId", user.households[0].householdId);
             }
-            navigate("/");
+            navigate(user.email.toLowerCase() === SUPPORT_EMAIL ? "/Tickets" : "/");
         } catch (err) {
             setError(err.response?.data?.message || "Login failed.");
         }

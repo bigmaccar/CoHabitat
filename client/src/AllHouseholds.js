@@ -2,17 +2,14 @@ import { Link } from "react-router-dom";
 import React from "react";
 
 function AllHouseholds(){
-    const householdId = localStorage.getItem("householdId");
-
     return (
         <section className="layout">
             <div className="leftSide">
                 <div className="sidebar">
                     <center><ul>
-                        <li><Link to="/Tickets"><figure><img src={require('.//images/list.png')} className="icon"/><figcaption>Tickets</figcaption></figure></Link></li>
-                        <li class = "active"><Link to="/AllHouseholds"><figure><img src={require('.//images/homeIcon.png')} className="icon"/><figcaption>Households</figcaption></figure></Link></li>
-                        <li><Link to="/AllUsers"><figure><img src={require('.//images/roommates.png')} className="icon"/><figcaption>Users</figcaption></figure></Link></li>
-                        <li><Link to="/Settings"><figure><img src={require('.//images/settings.png')} className="icon"/><figcaption>Settings</figcaption></figure></Link></li>
+                        <li><Link to="/Tickets"><figure><img src={require("./images/list.png")} className="icon" alt="Tickets"/><figcaption>Tickets</figcaption></figure></Link></li>
+                        <li className="active"><Link to="/AllHouseholds"><figure><img src={require("./images/homeIcon.png")} className="icon" alt="Households"/><figcaption>Households</figcaption></figure></Link></li>
+                        <li><Link to="/AllUsers"><figure><img src={require("./images/roommates.png")} className="icon" alt="Users"/><figcaption>Users</figcaption></figure></Link></li>
                     </ul></center>
                 </div>
             </div>
