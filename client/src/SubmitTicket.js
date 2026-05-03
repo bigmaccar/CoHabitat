@@ -51,9 +51,15 @@ function SubmitTicket() {
             <div className="body" style={{ padding: "20px" }}>
                 <h1>Submit a Ticket</h1>
                 <form>
-                    <select>Type:</select> {/* update with types of tickets */}
+                    <label for="type">Ticket Type:</label>
+                        <select name="type" id="type">
+                            <option value="website">Website Issue/Bug</option>
+                            <option value="roommate">Roommate Issue</option>
+                            <option value="user">Issue With A Non-Roommate</option>
+                        </select>
                     <h2>Description:</h2>
                     <textarea />
+                    <input type = "submit">Submit</input>
                 </form>
             </div>
         </section>

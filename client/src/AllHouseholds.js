@@ -2,6 +2,21 @@ import { Link } from "react-router-dom";
 import React from "react";
 
 function AllHouseholds(){
+
+    const [households, setHouseholds] = useState([]);
+
+    useEffect(() => {
+            const fetchData = async () => {
+                try {
+                    const allHouseholds = await axios.get("http://localhost:9000/getAllHouseholds");
+                    setHouseholds(allHouseholds);
+                } catch (error) {
+                    console.log("Error while fetching data", error);
+                }
+            };
+            fetchData();
+        }, []);
+
     return (
         <section className="layout">
             <div className="leftSide">
@@ -16,7 +31,11 @@ function AllHouseholds(){
             <div className="body">
                 <h1 style = {{marginLeft: 40}}>All Households</h1>
                 <ul>
-                    <li>Household 1 <button>Edit Info</button></li> {/* update with options to edit, message, ban,etc*/}
+                    {households.map(household => (
+                        <li><img src={require('./images/homeIcon.png')} />{household.name}
+                        <button>Edit Household Info</button> <button>Message Household Owner</button><button>Suspend/Ban Household</button>
+                            <button>Delete Household Info</button></li> 
+                    ))} {/* buttons don't do anything currently */}
                 </ul>
             </div>
         </section>

@@ -2,6 +2,21 @@ import { Link } from "react-router-dom";
 import React from "react";
 
 function AllUsers(){
+
+    const [users, setUsers] = useState([]);
+
+    useEffect(() => {
+            const fetchData = async () => {
+                try {
+                    const allUsers = await axios.get("http://localhost:9000/getAllUsers");
+                    setUsers(allUsers);
+                } catch (error) {
+                    console.log("Error while fetching data", error);
+                }
+            };
+            fetchData();
+        }, []);
+
     return (
         <section className="layout">
             <div className="leftSide">
@@ -16,7 +31,12 @@ function AllUsers(){
             <div className="body">
                 <h1 style = {{marginLeft: 40}}>All Users</h1>
                 <ul>
-                    <li>User 1 <button>Edit Info</button></li> {/* update with options to edit, message, ban,etc*/}
+                    {users.map(user => (
+                        <li><img src={require('./images/person.png')} />{user.firstName + " " + user.lastName}{user.isAdmin && (
+                            <img src={require('./images/crown.png')} alt="admin" />
+                        )} <button>Edit User Info</button> <button>Message User</button><button>Suspend/Ban User</button>
+                            <button>Delete User Info</button></li> 
+                    ))} {/* buttons don't do anything currently */}
                 </ul>
             </div>
         </section>
