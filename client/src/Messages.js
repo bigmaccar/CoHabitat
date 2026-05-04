@@ -109,9 +109,12 @@ function getReplyTarget(messages, userId) {
 
 function Messages(){
     const userId = localStorage.getItem("userId");
+    const householdId = localStorage.getItem("householdId");
     const userName = localStorage.getItem("userName") || "User";
     const hiddenChatsKey = `hiddenMessageChats_${userId}`;
     const chatNamesKey = `messageChatNames_${userId}`;
+    
+    // Existing message state
     const [messages, setMessages] = useState([]);
     const [activeThread, setActiveThread] = useState("");
     const [supportMessage, setSupportMessage] = useState("");
@@ -120,6 +123,21 @@ function Messages(){
     const [hiddenChats, setHiddenChats] = useState(() => getSavedChatMap(hiddenChatsKey));
     const [chatNames, setChatNames] = useState(() => getSavedData(chatNamesKey, {}));
 
+    // Support Tickets state
+    const [activeTab, setActiveTab] = useState("messages"); // "messages" or "tickets"
+    const [supportTickets, setSupportTickets] = useState([]);
+    const [activeTicketId, setActiveTicketId] = useState(null);
+    const [ticketError, setTicketError] = useState("");
+    const [showCreateTicketForm, setShowCreateTicketForm] = useState(false);
+    const [newTicketForm, setNewTicketForm] = useState({
+        title: "",
+        description: "",
+        type: "other",
+        priority: "low"
+    });
+    const [ticketMessageText, setTicketMessageText] = useState("");
+
+    // Fetch messages (existing)
     const fetchMessages = useCallback(async () => {
         try {
             const inboxRes = await axios.get("http://localhost:7000/api/messages", {
@@ -141,10 +159,81 @@ function Messages(){
         }
     }, [activeThread, userId]);
 
+    // Fetch support tickets
+    const fetchSupportTickets = useCallback(async () => {
+        if (!householdId) return;
+        try {
+            const res = await axios.get("http://localhost:7000/api/supportTickets", {
+                params: { householdId }
+            });
+            setSupportTickets(res.data);
+            setTicketError("");
+        } catch (err) {
+            setTicketError(err.response?.data?.errorMessage || "Could not load support tickets");
+        }
+    }, [householdId]);
+
     useEffect(() => {
         fetchMessages();
     }, [fetchMessages]);
 
+    useEffect(() => {
+        if (activeTab === "tickets") {
+            fetchSupportTickets();
+        }
+    }, [activeTab, fetchSupportTickets]);
+
+    // Create support ticket
+    async function handleCreateTicket(e) {
+        e.preventDefault();
+        try {
+            await axios.post("http://localhost:7000/api/supportTicket", {
+                householdId,
+                reporterId: userId,
+                ...newTicketForm
+            });
+            setNewTicketForm({ title: "", description: "", type: "other", priority: "low" });
+            setShowCreateTicketForm(false);
+            setTicketError("");
+            fetchSupportTickets();
+        } catch (err) {
+            setTicketError(err.response?.data?.errorMessage || "Failed to create ticket");
+        }
+    }
+
+    // Add message to support ticket
+    async function handleAddTicketMessage(e) {
+        e.preventDefault();
+        if (!ticketMessageText || !activeTicketId) return;
+
+        try {
+            await axios.post(`http://localhost:7000/api/supportTicket/${activeTicketId}/messages`, {
+                supportTicketId: activeTicketId,
+                authorId: userId,
+                text: ticketMessageText
+            });
+            setTicketMessageText("");
+            fetchSupportTickets();
+        } catch (err) {
+            setTicketError(err.response?.data?.errorMessage || "Failed to add message");
+        }
+    }
+
+    // Update ticket status
+    async function handleUpdateTicketStatus(ticketId, newStatus) {
+        try {
+            await axios.put(`http://localhost:7000/api/update/supportTicket/${ticketId}`, {
+                status: newStatus
+            });
+            fetchSupportTickets();
+        } catch (err) {
+            setTicketError(err.response?.data?.errorMessage || "Failed to update status");
+        }
+    }
+
+    const activeTicket = supportTickets.find(t => t._id === activeTicketId);
+
+    // Existing message threads logic
     const threads = messages.reduce((threadList, message) => {
         const threadKey = getThreadKey(message, userId);
         if (!threadList[threadKey]) {
@@ -237,7 +326,7 @@ function Messages(){
 
     async function sendSupportMessage(e) {
         e.preventDefault();
-        const supportChatId = createSupportChatId(userId);
+        const supportChatId = `${userId}-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
 
         try {
             await axios.post("http://localhost:7000/api/message", {
@@ -259,90 +348,271 @@ function Messages(){
         }
     }
 
-    return (
-        <section className="layout">
-            <div className="leftSide">
-                <div className="sidebar">
-                    <center><ul>
-                        <li><Link to="/Roommates"><figure><img src={require("./images/roommates.png")} className="icon" alt="Roommates"/><figcaption>Roommates</figcaption></figure></Link></li>
-                        <li><Link to="/Bills"><figure><img src={require("./images/bill.png")} className="icon" alt="Bills"/><figcaption>Bills</figcaption></figure></Link></li>
-                        <li><Link to="/Calendar"><figure><img src={require("./images/calendar.png")} className="icon" alt="Calendar"/><figcaption>Calendar</figcaption></figure></Link></li>
-                        <li><Link to="/Lists"><figure><img src={require("./images/list.png")} className="icon" alt="Lists"/><figcaption>Lists</figcaption></figure></Link></li>
-                        <li><Link to="/Settings"><figure><img src={require("./images/settings.png")} className="icon" alt="Settings"/><figcaption>Settings</figcaption></figure></Link></li>
-                    </ul></center>
-                </div>
+return (
+    <section className="layout">
+        <div className="leftSide">
+            <div className="sidebar">
+                <center><ul>
+                    <li><Link to="/Roommates"><figure><img src={require('./images/roommates.png')} className="icon" alt="Roommates"/><figcaption>Roommates</figcaption></figure></Link></li>
+                    <li><Link to="/Bills"><figure><img src={require('./images/bill.png')} className="icon" alt="Bills"/><figcaption>Bills</figcaption></figure></Link></li>
+                    <li><Link to="/Calendar"><figure><img src={require('./images/calendar.png')} className="icon" alt="Calendar"/><figcaption>Calendar</figcaption></figure></Link></li>
+                    <li><Link to="/Lists"><figure><img src={require('./images/list.png')} className="icon" alt="Lists"/><figcaption>Lists</figcaption></figure></Link></li>
+                    <li className="active"><Link to="/Messages"><figure><img src={require('./images/dm.png')} className="icon" alt="Messages"/><figcaption>Messages</figcaption></figure></Link></li>
+                    <li><Link to="/Settings"><figure><img src={require('./images/settings.png')} className="icon" alt="Settings"/><figcaption>Settings</figcaption></figure></Link></li>
+                </ul></center>
             </div>
-            <div className="body messagePage">
-                <h1>Messages</h1>
-                {messageStatus && <p>{messageStatus}</p>}
+        </div>
 
-                <form className="messagePanel supportComposer" onSubmit={sendSupportMessage}>
-                    <h2>Contact Support</h2>
-                    <textarea
-                        value={supportMessage}
-                        onChange={e => setSupportMessage(e.target.value)}
-                        placeholder="Describe your support issue."
-                        required
-                    />
-                    <button type="submit">Send to Support</button>
-                </form>
+        <div className="body" style={{ display: "flex", flexDirection: "column" }}>
+            {/* Tab buttons */}
+            <div style={{ display: "flex", borderBottom: "1px solid #ddd", padding: "10px 20px", backgroundColor: "#f5f5f5" }}>
+                <button
+                    onClick={() => setActiveTab("messages")}
+                    style={{
+                        padding: "10px 20px",
+                        marginRight: "10px",
+                        backgroundColor: activeTab === "messages" ? "#68B684" : "transparent",
+                        color: activeTab === "messages" ? "white" : "black",
+                        border: "none",
+                        borderRadius: "5px",
+                        cursor: "pointer",
+                        fontWeight: activeTab === "messages" ? "bold" : "normal"
+                    }}
+                >
+                    Messages
+                </button>
+                <button
+                    onClick={() => setActiveTab("tickets")}
+                    style={{
+                        padding: "10px 20px",
+                        backgroundColor: activeTab === "tickets" ? "#68B684" : "transparent",
+                        color: activeTab === "tickets" ? "white" : "black",
+                        border: "none",
+                        borderRadius: "5px",
+                        cursor: "pointer",
+                        fontWeight: activeTab === "tickets" ? "bold" : "normal"
+                    }}
+                >
+                    Support Tickets
+                </button>
+            </div>
 
-                <div className="chatLayout">
-                    <div className="threadList">
-                        <h2>Conversations</h2>
-                        {threadEntries.length === 0 ? (
-                            <p>No conversations yet.</p>
-                        ) : visibleThreadEntries.length === 0 ? (
-                            <p>No visible conversations.</p>
-                        ) : (
-                            visibleThreadEntries.map(([threadKey, threadMessages]) => (
-                                <div className="threadItem" key={threadKey}>
-                                    <button
-                                        className={activeThread === threadKey ? "threadButton activeThread" : "threadButton"}
-                                        onClick={() => setActiveThread(threadKey)}
-                                    >
+            {/* Messages Tab */}
+            {activeTab === "messages" && (
+                <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
+                    {/* Thread list */}
+                    <div style={{ width: "30%", borderRight: "1px solid #ddd", overflowY: "auto" }}>
+                        <div style={{ padding: "15px" }}>
+                            <h3>Conversations</h3>
+                            {visibleThreadEntries.map(([threadKey, threadMessages]) => (
+                                <div
+                                    key={threadKey}
+                                    onClick={() => setActiveThread(threadKey)}
+                                    style={{
+                                        padding: "10px",
+                                        marginBottom: "10px",
+                                        backgroundColor: activeThread === threadKey ? "#e8f5e9" : "#fff",
+                                        border: "1px solid #ddd",
+                                        borderRadius: "5px",
+                                        cursor: "pointer"
+                                    }}
+                                >
+                                    <p style={{ margin: "0", fontWeight: activeThread === threadKey ? "bold" : "normal" }}>
                                         {chatNames[threadKey] || getThreadName(threadMessages, userId)}
-                                        {threadKey.startsWith("support:") && isSupportThreadClosed(threadMessages) ? " (Ended)" : ""}
-                                    </button>
-                                    <button className="smallChatButton" type="button" onClick={() => renameChat(threadKey, threadMessages)}>Rename</button>
-                                    <button className="smallChatButton deleteChatButton" type="button" onClick={() => hideChat(threadKey, threadMessages)}>Delete</button>
+                                    </p>
+                                    <small>{threadMessages.length} messages</small>
                                 </div>
-                            ))
-                        )}
+                            ))}
+                        </div>
                     </div>
 
-                    <div className="chatWindow">
-                        <h2>{activeThreadName}</h2>
+                    {/* Active thread or empty state */}
+                    <div style={{ width: "70%", display: "flex", flexDirection: "column", padding: "20px", overflowY: "auto" }}>
                         {activeMessages.length === 0 ? (
-                            <p>Select a conversation.</p>
+                            <div>
+                                <h3>No messages yet</h3>
+                                <form onSubmit={sendSupportMessage} style={{ marginTop: "20px" }}>
+                                    <textarea
+                                        value={supportMessage}
+                                        onChange={e => setSupportMessage(e.target.value)}
+                                        placeholder="Start a support conversation..."
+                                        style={{ width: "100%", minHeight: "80px", padding: "10px", borderRadius: "5px", border: "1px solid #ccc" }}
+                                    />
+                                    <button className="btnGreen" type="submit" style={{ marginTop: "10px" }}>Send Support Message</button>
+                                </form>
+                            </div>
                         ) : (
-                            activeMessages.map(message => (
-                                <div
-                                    className={isSupportEndMessage(message) ? "chatBubble systemBubble" : isOutgoingMessage(message, userId) ? "chatBubble outgoingBubble" : "chatBubble incomingBubble"}
-                                    key={message._id}
-                                >
-                                    <p>{message.messageText}</p>
-                                    {!isSupportEndMessage(message) && <small>{isOutgoingMessage(message, userId) ? "You" : message.senderName || "User"}</small>}
+                            <>
+                                <h3>{activeThreadName}</h3>
+                                <div style={{ flex: 1, overflowY: "auto", marginBottom: "20px", border: "1px solid #ddd", padding: "10px", borderRadius: "5px" }}>
+                                    {activeMessages.map((msg, idx) => (
+                                        <div
+                                            key={idx}
+                                            style={{
+                                                marginBottom: "15px",
+                                                padding: "10px",
+                                                backgroundColor: isOutgoingMessage(msg, userId) ? "#c8e6c9" : "#fff9c4",
+                                                borderRadius: "5px",
+                                                textAlign: isOutgoingMessage(msg, userId) ? "right" : "left"
+                                            }}
+                                        >
+                                            <p style={{ margin: "0 0 5px 0" }}>
+                                                <strong>{msg.senderName || "User"}</strong>
+                                            </p>
+                                            <p style={{ margin: "0" }}>{msg.messageText}</p>
+                                            <small>{new Date(msg.createdAt).toLocaleTimeString()}</small>
+                                        </div>
+                                    ))}
                                 </div>
-                            ))
+
+                                {!activeThreadClosed && replyTarget && (
+                                    <form onSubmit={sendReply}>
+                                        <textarea
+                                            value={replyText}
+                                            onChange={e => setReplyText(e.target.value)}
+                                            placeholder={`Reply to ${replyTarget.name}...`}
+                                            style={{ width: "100%", minHeight: "60px", padding: "10px", borderRadius: "5px", border: "1px solid #ccc" }}
+                                        />
+                                        <button className="btnGreen" type="submit" style={{ marginTop: "10px" }}>Send Reply</button>
+                                    </form>
+                                )}
+
+                                {messageStatus && <p style={{ color: "green", marginTop: "10px" }}>{messageStatus}</p>}
+                            </>
                         )}
-                        {activeThreadClosed && <p className="closedChatNotice">This support chat has been ended. Use Start New Support Chat to contact support again.</p>}
-                        {replyTarget && (
-                            <form className="chatReplyForm" onSubmit={sendReply}>
-                                <textarea
-                                    value={replyText}
-                                    onChange={e => setReplyText(e.target.value)}
-                                    placeholder="Write a reply."
+                    </div>
+                </div>
+            )}
+
+            {/* Support Tickets Tab */}
+            {activeTab === "tickets" && (
+                <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
+                    {/* Ticket list */}
+                    <div style={{ width: "30%", borderRight: "1px solid #ddd", overflowY: "auto", padding: "15px" }}>
+                        <h3>Support Tickets</h3>
+                        <button className="btnGreen" onClick={() => setShowCreateTicketForm(!showCreateTicketForm)} style={{ marginBottom: "15px", width: "100%" }}>
+                            {showCreateTicketForm ? "Cancel" : "+ New Ticket"}
+                        </button>
+
+                        {showCreateTicketForm && (
+                            <form onSubmit={handleCreateTicket} style={{ marginBottom: "20px", padding: "10px", border: "1px solid #ddd", borderRadius: "5px" }}>
+                                <input
+                                    type="text"
+                                    placeholder="Title"
+                                    value={newTicketForm.title}
+                                    onChange={e => setNewTicketForm({ ...newTicketForm, title: e.target.value })}
                                     required
+                                    style={{ width: "100%", padding: "8px", marginBottom: "8px", borderRadius: "3px", border: "1px solid #ccc", boxSizing: "border-box" }}
                                 />
-                                <button type="submit">Send Reply</button>
+                                <textarea
+                                    placeholder="Description"
+                                    value={newTicketForm.description}
+                                    onChange={e => setNewTicketForm({ ...newTicketForm, description: e.target.value })}
+                                    required
+                                    style={{ width: "100%", padding: "8px", marginBottom: "8px", borderRadius: "3px", border: "1px solid #ccc", boxSizing: "border-box" }}
+                                />
+                                <select value={newTicketForm.type} onChange={e => setNewTicketForm({ ...newTicketForm, type: e.target.value })} style={{ width: "100%", padding: "8px", marginBottom: "8px", borderRadius: "3px", border: "1px solid #ccc", boxSizing: "border-box" }}>
+                                    <option value="apartment">Apartment</option>
+                                    <option value="billing">Billing</option>
+                                    <option value="safety">Safety</option>
+                                    <option value="bug">Bug</option>
+                                    <option value="other">Other</option>
+                                </select>
+                                <select value={newTicketForm.priority} onChange={e => setNewTicketForm({ ...newTicketForm, priority: e.target.value })} style={{ width: "100%", padding: "8px", marginBottom: "8px", borderRadius: "3px", border: "1px solid #ccc", boxSizing: "border-box" }}>
+                                    <option value="low">Low</option>
+                                    <option value="medium">Medium</option>
+                                    <option value="high">High</option>
+                                </select>
+                                <button className="btnGreen" type="submit" style={{ width: "100%" }}>Create</button>
                             </form>
                         )}
+
+                        {ticketError && <p style={{ color: "red" }}>{ticketError}</p>}
+
+                        <div>
+                            {supportTickets.length === 0 ? (
+                                <p>No support tickets yet.</p>
+                            ) : (
+                                supportTickets.map(ticket => (
+                                    <div
+                                        key={ticket._id}
+                                        onClick={() => setActiveTicketId(ticket._id)}
+                                        style={{
+                                            padding: "10px",
+                                            marginBottom: "10px",
+                                            backgroundColor: activeTicketId === ticket._id ? "#e8f5e9" : "#fff",
+                                            border: "1px solid #ddd",
+                                            borderRadius: "5px",
+                                            cursor: "pointer"
+                                        }}
+                                    >
+                                        <p style={{ margin: "0", fontWeight: "bold" }}>{ticket.title}</p>
+                                        <small style={{ color: "#666" }}>Status: {ticket.status}</small>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Ticket detail */}
+                    <div style={{ width: "70%", padding: "20px", overflowY: "auto" }}>
+                        {!activeTicket ? (
+                            <p>Select a ticket to view details.</p>
+                        ) : (
+                            <>
+                                <h3>{activeTicket.title}</h3>
+                                <p><strong>Type:</strong> {activeTicket.type}</p>
+                                <p><strong>Priority:</strong> {activeTicket.priority}</p>
+                                <p>
+                                    <strong>Status:</strong>
+                                    <select
+                                        value={activeTicket.status}
+                                        onChange={e => handleUpdateTicketStatus(activeTicket._id, e.target.value)}
+                                        style={{ marginLeft: "10px", padding: "5px" }}
+                                    >
+                                        <option value="open">Open</option>
+                                        <option value="in_progress">In Progress</option>
+                                        <option value="resolved">Resolved</option>
+                                        <option value="closed">Closed</option>
+                                    </select>
+                                </p>
+                                <p><strong>Description:</strong> {activeTicket.description}</p>
+                                <p><strong>Created:</strong> {new Date(activeTicket.createdAt).toLocaleString()}</p>
+
+                                <hr style={{ margin: "20px 0" }} />
+
+                                <h4>Messages</h4>
+                                <div style={{ border: "1px solid #ddd", padding: "10px", borderRadius: "5px", maxHeight: "250px", overflowY: "auto", marginBottom: "15px" }}>
+                                    {activeTicket.messages.length === 0 ? (
+                                        <p>No messages yet.</p>
+                                    ) : (
+                                        activeTicket.messages.map((msg, idx) => (
+                                            <div key={idx} style={{ marginBottom: "10px", padding: "8px", backgroundColor: "#f9f9f9", borderRadius: "3px" }}>
+                                                <p style={{ margin: "0", fontWeight: "bold", fontSize: "12px" }}>Author: {msg.authorId}</p>
+                                                <p style={{ margin: "5px 0 0 0" }}>{msg.text}</p>
+                                                <small>{new Date(msg.createdAt).toLocaleString()}</small>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+
+                                <form onSubmit={handleAddTicketMessage}>
+                                    <textarea
+                                        value={ticketMessageText}
+                                        onChange={e => setTicketMessageText(e.target.value)}
+                                        placeholder="Add a message to this ticket..."
+                                        style={{ width: "100%", minHeight: "60px", padding: "10px", borderRadius: "5px", border: "1px solid #ccc", boxSizing: "border-box" }}
+                                    />
+                                    <button className="btnGreen" type="submit" style={{ marginTop: "10px" }}>Send Message</button>
+                                </form>
+                            </>
+                        )}
                     </div>
                 </div>
-            </div>
-        </section>
-    );
-}
+            )}
+        </div>
+    </section>
+);
+};
 
 export default Messages;

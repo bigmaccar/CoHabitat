@@ -7,6 +7,7 @@ const {createHousehold, getAllHouseholds, getHouseholdById, updateHousehold, del
 const {createListing, getAllListings, getListingById, updateListing, deleteListing} = require("./controller/listingController.js"); 
 const {createMessage, getAllMessagesById} = require("./controller/messageController.js"); 
 const {createSavedListing, getSavedListingById, getAllSavedListings, updateSavedListing, deleteSavedListing} = require("./controller/savedListingController.js");
+const { createSupportTicket, getAllSupportTickets, getSupportTicketById, updateSupportTicket, addSupportTicketMessage } = require("./controller/supportController.js");
 
 const router = express.Router();
 
@@ -56,6 +57,12 @@ router.get("/savedListings", getAllSavedListings);
 router.get("/savedListing", getSavedListingById);
 router.put("/update/savedListing/:id", updateSavedListing);
 router.delete("/delete/savedListing/:id", deleteSavedListing);
+
+router.post("/supportTicket", createSupportTicket);
+router.get("/supportTickets", getAllSupportTickets);
+router.get("/supportTicket", getSupportTicketById);
+router.put("/update/supportTicket/:id", updateSupportTicket);
+router.post("/supportTicket/:id/messages", addSupportTicketMessage);
 
 
 module.exports = router;

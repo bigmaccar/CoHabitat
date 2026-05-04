@@ -123,6 +123,56 @@ const ChoreSchema = new Schema({
   }
 }, { timestamps: true, collection: "Chore" });
 
+const SupportTicketSchema = new Schema({
+  householdId: { type: Schema.Types.ObjectId, ref: "Household", required: true },
+  reporterId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+  reportedUserId: { type: Schema.Types.ObjectId, ref: "User" },
+
+  apartmentId: { type: Schema.Types.ObjectId, ref: "Listing" },
+  type: {
+    type: String,
+    enum: ["apartment", "billing", "safety", "bug", "other"],
+    default: "other"
+  },
+  priority: {
+    type: String,
+    enum: ["low", "medium", "high"],
+    default: "low"
+  },
+  status: {
+    type: String,
+    enum: ["open", "in_progress", "resolved", "closed"],
+    default: "open"
+  },
+  title: { type: String, required: true },
+  description: { type: String, required: true },
+  attachments: [
+    {
+      url: String,
+      name: String,
+      mimeType: String
+    }
+  ],
+  assigneeId: { type: Schema.Types.ObjectId, ref: "User" },
+  messages: [
+    {
+      authorId: { type: Schema.Types.ObjectId, ref: "User" },
+      text: String,
+      createdAt: { type: Date, default: Date.now }
+    }
+  ],
+  auditTrail: [
+    {
+      action: String,
+      byUserId: { type: Schema.Types.ObjectId, ref: "User" },
+      note: String,
+      createdAt: { type: Date, default: Date.now }
+    }
+  ]
+}, { timestamps: true });
+
+
+
 module.exports = {
   User: mongoose.model("User", UserSchema),
   Household: mongoose.model("Household", HouseholdSchema),
@@ -131,5 +181,6 @@ module.exports = {
   Message: mongoose.model("Message", MessageSchema),
   Bill: mongoose.model("Bill", BillSchema),
   CalendarEvent: mongoose.model("CalendarEvent", CalendarEventSchema),
-  Chore: mongoose.model("Chore", ChoreSchema)
+  Chore: mongoose.model("Chore", ChoreSchema),
+  SupportTicket: mongoose.model("SupportTicket", SupportTicketSchema)
 };
