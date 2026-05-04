@@ -136,6 +136,16 @@ function Messages(){
         priority: "low"
     });
     const [ticketMessageText, setTicketMessageText] = useState("");
+    const [ticketFilters, setTicketFilters] = useState({
+        type: "",
+        status: ""
+    });
+    const [showModerationForm, setShowModerationForm] = useState(false);
+    const [moderationData, setModerationData] = useState({
+        action: "ban",
+        reason: "",
+        durationDays: 30
+    });
 
     // Fetch messages (existing)
     const fetchMessages = useCallback(async () => {
@@ -161,17 +171,18 @@ function Messages(){
 
     // Fetch support tickets
     const fetchSupportTickets = useCallback(async () => {
-        if (!householdId) return;
-        try {
-            const res = await axios.get("http://localhost:7000/api/supportTickets", {
-                params: { householdId }
-            });
-            setSupportTickets(res.data);
-            setTicketError("");
-        } catch (err) {
-            setTicketError(err.response?.data?.errorMessage || "Could not load support tickets");
-        }
-    }, [householdId]);
+    if (!householdId) return;
+    try {
+        const params = { householdId, ...ticketFilters };
+        const res = await axios.get("http://localhost:7000/api/supportTickets", {
+            params
+        });
+        setSupportTickets(res.data);
+        setTicketError("");
+    } catch (err) {
+        setTicketError(err.response?.data?.errorMessage || "Could not load support tickets");
+    }
+}, [householdId, ticketFilters]);
 
     useEffect(() => {
         fetchMessages();
@@ -348,6 +359,49 @@ function Messages(){
         }
     }
 
+    async function handleBanUser() {
+    if (!activeTicket?.reporterId || !moderationData.reason) {
+        setTicketError("Missing reason for moderation action");
+        return;
+    }
+
+    try {
+        await axios.post("http://localhost:7000/api/moderation/ban", {
+            targetUserId: activeTicket.reporterId,
+            reason: moderationData.reason,
+            durationDays: moderationData.durationDays,
+            byUserId: userId
+        });
+        setTicketError("");
+        setShowModerationForm(false);
+        setModerationData({ action: "ban", reason: "", durationDays: 30 });
+        alert("User banned successfully");
+    } catch (err) {
+        setTicketError(err.response?.data?.errorMessage || "Failed to ban user");
+    }
+}
+
+    async function handleKickUser() {
+    if (!activeTicket?.reporterId || !moderationData.reason) {
+        setTicketError("Missing reason for moderation action");
+        return;
+    }
+
+    try {
+        await axios.post("http://localhost:7000/api/moderation/kick", {
+            targetUserId: activeTicket.reporterId,
+            reason: moderationData.reason,
+            byUserId: userId
+        });
+        setTicketError("");
+        setShowModerationForm(false);
+        setModerationData({ action: "ban", reason: "", durationDays: 30 });
+        alert("User kicked successfully");
+    } catch (err) {
+        setTicketError(err.response?.data?.errorMessage || "Failed to kick user");
+    }
+}
+
 return (
     <section className="layout">
         <div className="leftSide">
@@ -490,6 +544,35 @@ return (
                     {/* Ticket list */}
                     <div style={{ width: "30%", borderRight: "1px solid #ddd", overflowY: "auto", padding: "15px" }}>
                         <h3>Support Tickets</h3>
+                        
+                        {/* Filters */}
+                        <div style={{ marginBottom: "15px" }}>
+                            <select 
+                                value={ticketFilters.type} 
+                                onChange={e => setTicketFilters({ ...ticketFilters, type: e.target.value })}
+                                style={{ width: "100%", padding: "8px", marginBottom: "8px", borderRadius: "3px", border: "1px solid #ccc", boxSizing: "border-box" }}
+                            >
+                                <option value="">All Types</option>
+                                <option value="apartment">Apartment</option>
+                                <option value="billing">Billing</option>
+                                <option value="safety">Safety</option>
+                                <option value="bug">Bug</option>
+                                <option value="other">Other</option>
+                            </select>
+
+                            <select 
+                                value={ticketFilters.status} 
+                                onChange={e => setTicketFilters({ ...ticketFilters, status: e.target.value })}
+                                style={{ width: "100%", padding: "8px", marginBottom: "8px", borderRadius: "3px", border: "1px solid #ccc", boxSizing: "border-box" }}
+                            >
+                                <option value="">All Statuses</option>
+                                <option value="open">Open</option>
+                                <option value="in_progress">In Progress</option>
+                                <option value="resolved">Resolved</option>
+                                <option value="closed">Closed</option>
+                            </select>
+                        </div>
+
                         <button className="btnGreen" onClick={() => setShowCreateTicketForm(!showCreateTicketForm)} style={{ marginBottom: "15px", width: "100%" }}>
                             {showCreateTicketForm ? "Cancel" : "+ New Ticket"}
                         </button>
@@ -605,6 +688,64 @@ return (
                                     />
                                     <button className="btnGreen" type="submit" style={{ marginTop: "10px" }}>Send Message</button>
                                 </form>
+
+                                <hr style={{ margin: "20px 0" }} />
+
+                                <h4>Moderation Actions</h4>
+                                {!showModerationForm ? (
+                                    <div style={{ display: "flex", gap: "10px" }}>
+                                        <button 
+                                            style={{ padding: "10px 15px", backgroundColor: "#ff6b6b", color: "white", border: "none", borderRadius: "5px", cursor: "pointer" }}
+                                            onClick={() => { setModerationData({ ...moderationData, action: "ban" }); setShowModerationForm(true); }}
+                                        >
+                                            Ban User
+                                        </button>
+                                        <button 
+                                            style={{ padding: "10px 15px", backgroundColor: "#ff9800", color: "white", border: "none", borderRadius: "5px", cursor: "pointer" }}
+                                            onClick={() => { setModerationData({ ...moderationData, action: "kick" }); setShowModerationForm(true); }}
+                                        >
+                                            Kick User
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div style={{ padding: "15px", border: "1px solid #ddd", borderRadius: "5px", marginTop: "10px" }}>
+                                        <h5>Confirm {moderationData.action === "ban" ? "Ban" : "Kick"}</h5>
+                                        <textarea
+                                            placeholder="Reason for action..."
+                                            value={moderationData.reason}
+                                            onChange={e => setModerationData({ ...moderationData, reason: e.target.value })}
+                                            style={{ width: "100%", padding: "8px", marginBottom: "8px", borderRadius: "3px", border: "1px solid #ccc", boxSizing: "border-box" }}
+                                        />
+                                        {moderationData.action === "ban" && (
+                                            <div style={{ marginBottom: "8px" }}>
+                                                <label>Ban Duration (days): </label>
+                                                <input 
+                                                    type="number" 
+                                                    value={moderationData.durationDays} 
+                                                    onChange={e => setModerationData({ ...moderationData, durationDays: parseInt(e.target.value) })}
+                                                    min="1"
+                                                    style={{ width: "100%", padding: "8px", borderRadius: "3px", border: "1px solid #ccc", boxSizing: "border-box" }}
+                                                />
+                                            </div>
+                                        )}
+                                        <div style={{ display: "flex", gap: "10px" }}>
+                                            <button 
+                                                className="btnGreen"
+                                                onClick={moderationData.action === "ban" ? handleBanUser : handleKickUser}
+                                                style={{ flex: 1 }}
+                                            >
+                                                Confirm {moderationData.action === "ban" ? "Ban" : "Kick"}
+                                            </button>
+                                            <button 
+                                                className="btnOutline"
+                                                onClick={() => setShowModerationForm(false)}
+                                                style={{ flex: 1 }}
+                                            >
+                                                Cancel
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
                             </>
                         )}
                     </div>

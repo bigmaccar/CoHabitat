@@ -93,10 +93,55 @@ const addSupportTicketMessage = async(req, res) => {
     }
 };
 
+const banUser = async (req, res) => {
+    try {
+        const { targetUserId, reason, durationDays } = req.body;
+        const byUserId = req.body.byUserId;
+
+        if (!targetUserId || !reason || !byUserId) {
+            return res.status(400).json({ errorMessage: "Missing required fields: targetUserId, reason, byUserId" });
+        }
+
+        const banUntil = new Date();
+        banUntil.setDate(banUntil.getDate() + (durationDays || 30));
+
+        const { User } = require("../schema");
+        await User.findByIdAndUpdate(targetUserId, { 
+            bannedUntil: banUntil,
+            isBanned: true 
+        });
+
+        res.status(200).json({ message: "User banned successfully", bannedUntil });
+    } catch (error) {
+        res.status(500).json({ errorMessage: error.message });
+    }
+};
+
+const kickUser = async (req, res) => {
+    try {
+        const { targetUserId, reason, byUserId } = req.body;
+
+        if (!targetUserId || !reason || !byUserId) {
+            return res.status(400).json({ errorMessage: "Missing required fields: targetUserId, reason, byUserId" });
+        }
+
+        const { User } = require("../schema");
+        await User.findByIdAndUpdate(targetUserId, { 
+            isKicked: true 
+        });
+
+        res.status(200).json({ message: "User kicked successfully" });
+    } catch (error) {
+        res.status(500).json({ errorMessage: error.message });
+    }
+};
+
 module.exports = {
     createSupportTicket,
     getAllSupportTickets,
     getSupportTicketById,
     updateSupportTicket,
-    addSupportTicketMessage
+    addSupportTicketMessage,
+    banUser,
+    kickUser
 };
