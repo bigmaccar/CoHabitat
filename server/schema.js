@@ -7,6 +7,10 @@ const UserSchema = new Schema({
   email: { type: String, unique: true, required: true },
   password: String,
   roles: [String],
+  bio: String,
+  preferredLocation: String,
+  budgetMin: Number,
+  budgetMax: Number,
   lifestyleTags: [String],
   households: [
     {

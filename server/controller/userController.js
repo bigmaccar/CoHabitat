@@ -4,14 +4,36 @@ function getRequestId(req) {
     return req.params.id || req.query._id || req.query.id || req.body?._id;
 }
 
+function normalizeEmail(email) {
+    return String(email || "").trim().toLowerCase();
+}
+
 const createUser = async(req, res) => {
     try {
-        const newUser = new User(req.body);
-        const { email } = newUser;
-        const userExist = await User.findOne({ email: email });
+        const firstName = String(req.body.firstName || "").trim();
+        const lastName = String(req.body.lastName || "").trim();
+        const email = normalizeEmail(req.body.email);
+        const password = String(req.body.password || "");
+
+        if (!firstName || !lastName || !email || !password) {
+            return res.status(400).json({ message: "First name, last name, email, and password are required." });
+        }
+        if (!email.includes("@")) {
+            return res.status(400).json({ message: "Please enter a valid email address." });
+        }
+
+        const userExist = await User.findOne({ email });
         if (userExist) {
             return res.status(400).json({ message: "User already exists." });
         }
+
+        const newUser = new User({
+            ...req.body,
+            firstName,
+            lastName,
+            email,
+            password
+        });
         const savedData = await newUser.save();
         res.status(200).json({ message: "User created successfully", user: savedData });
     } catch (error) {
@@ -53,6 +75,26 @@ const updateUser = async(req, res) => {
         }
 
         const { _id, ...updates } = req.body;
+        if (updates.firstName !== undefined) {
+            updates.firstName = String(updates.firstName || "").trim();
+        }
+        if (updates.lastName !== undefined) {
+            updates.lastName = String(updates.lastName || "").trim();
+        }
+        if (updates.email !== undefined) {
+            updates.email = normalizeEmail(updates.email);
+            if (!updates.email || !updates.email.includes("@")) {
+                return res.status(400).json({ message: "Please enter a valid email address." });
+            }
+            const existingUser = await User.findOne({ email: updates.email, _id: { $ne: id } });
+            if (existingUser) {
+                return res.status(400).json({ message: "User already exists." });
+            }
+        }
+        if (Array.isArray(updates.lifestyleTags)) {
+            updates.lifestyleTags = updates.lifestyleTags.map(tag => String(tag).trim()).filter(Boolean);
+        }
+
         const updatedData = await User.findByIdAndUpdate(id, updates, { new: true });
         if (!updatedData) {
             return res.status(404).json({ message: "User not found." });
@@ -82,7 +124,12 @@ const deleteUser = async(req, res) => {
 
 const loginUser = async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const email = normalizeEmail(req.body.email);
+        const password = String(req.body.password || "");
+        if (!email || !password) {
+            return res.status(400).json({ message: "Email and password are required." });
+        }
+
         const user = await User.findOne({ email });
         if (!user) {
             return res.status(404).json({ message: "User not found." });
