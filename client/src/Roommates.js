@@ -126,6 +126,9 @@ function Roommates() {
                                 <img src={require("./images/person.png")} alt="Roommate" />
                                 {memberName(roommate)}
                                 {roommate.isAdmin && <img src={require("./images/crown.png")} alt="admin" />}
+                                {String(roommate._id) !== String(userId) && (
+                                    <Link to={`/Messages?recipientId=${roommate._id}`} style={{ marginLeft: 10, fontSize: 18 }}>Message</Link>
+                                )}
                                 {isCurrentUserAdmin && String(roommate._id) !== String(userId) && (
                                     <button className="btnRed" type="button" onClick={() => handleRemoveMember(roommate._id)}>Remove</button>
                                 )}

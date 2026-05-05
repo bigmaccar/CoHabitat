@@ -165,24 +165,32 @@ function Search(){
                 {visibleListings.map(listing => {
                     const listingKey = getListingKey(listing);
                     return (
-                        <div className="apartmentListWrapper" key={listing._id}>
-                            <div className="apartmentListImage">
-                                <img src={getListingImage(listing)} alt={listing.apartmentName || "Apartment"} />
-                            </div>
-                            <div className="apartmentList">
-                                <h1>{listing.apartmentName || "Untitled Listing"}</h1>
-                                <p>{listing.description || "No description provided."}</p>
-                                <p>{listing.location || [listing.city, listing.state].filter(Boolean).join(", ")}</p>
-                                <p>{formatRent(listing.rentAmount)}</p>
-                                {Array.isArray(listing.lifestyleTags) && listing.lifestyleTags.length > 0 && (
-                                    <p>Tags: {listing.lifestyleTags.join(", ")}</p>
-                                )}
+                        <article className="apartmentListWrapper" key={listing._id}>
+                            <Link
+                                className="apartmentListCardLink"
+                                to={`/Apartment?id=${listing._id}`}
+                                aria-label={`View details for ${listing.apartmentName || "listing"}`}
+                            >
+                                <div className="apartmentListImage">
+                                    <img src={getListingImage(listing)} alt={listing.apartmentName || "Apartment"} />
+                                </div>
+                                <div className="apartmentList">
+                                    <h1>{listing.apartmentName || "Untitled Listing"}</h1>
+                                    <p>{listing.description || "No description provided."}</p>
+                                    <p>{listing.location || [listing.city, listing.state].filter(Boolean).join(", ")}</p>
+                                    <p>{formatRent(listing.rentAmount)}</p>
+                                    {Array.isArray(listing.lifestyleTags) && listing.lifestyleTags.length > 0 && (
+                                        <p>Tags: {listing.lifestyleTags.join(", ")}</p>
+                                    )}
+                                </div>
+                            </Link>
+                            <div className="apartmentListActions">
                                 <Link to={`/Apartment?id=${listing._id}`}>View Details</Link>
                                 <button type="button" onClick={() => toggleSavedListing(listing)}>
                                     {savedListingKeys.includes(listingKey) ? "Unsave" : "Save"}
                                 </button>
                             </div>
-                        </div>
+                        </article>
                     );
                 })}
             </div>

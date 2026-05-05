@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import React, { useCallback, useEffect, useState } from "react";
 import axios from "axios";
 
@@ -104,6 +104,7 @@ function getReplyTarget(messages, userId) {
 }
 
 function Messages(){
+    const [searchParams, setSearchParams] = useSearchParams();
     const userId = localStorage.getItem("userId");
     const householdId = localStorage.getItem("householdId");
     const userName = localStorage.getItem("userName") || "User";
@@ -118,6 +119,9 @@ function Messages(){
     const [messageStatus, setMessageStatus] = useState("");
     const [hiddenChats, setHiddenChats] = useState(() => getSavedChatMap(hiddenChatsKey));
     const [chatNames, setChatNames] = useState(() => getSavedData(chatNamesKey, {}));
+    const [householdMembers, setHouseholdMembers] = useState([]);
+    const [newMessageReceiverId, setNewMessageReceiverId] = useState(searchParams.get("recipientId") || "");
+    const [newMessageText, setNewMessageText] = useState("");
 
     // Support Tickets state
     const [activeTab, setActiveTab] = useState("messages"); // "messages" or "tickets"
@@ -185,6 +189,42 @@ function Messages(){
     useEffect(() => {
         fetchMessages();
     }, [fetchMessages]);
+
+    useEffect(() => {
+        async function fetchHouseholdMembers() {
+            if (!householdId) {
+                setHouseholdMembers([]);
+                return;
+            }
+
+            try {
+                const [householdResponse, usersResponse] = await Promise.all([
+                    axios.get("http://localhost:7000/api/household", {
+                        params: { id: householdId }
+                    }),
+                    axios.get("http://localhost:7000/api/users")
+                ]);
+                const currentHousehold = householdResponse.data;
+                const users = Array.isArray(usersResponse.data) ? usersResponse.data : [];
+                const memberUsers = (currentHousehold.members || []).map(member => {
+                    const user = users.find(item => String(item._id) === String(member.userId));
+                    return user || null;
+                }).filter(user => user && String(user._id) !== String(userId));
+                setHouseholdMembers(memberUsers);
+            } catch (err) {
+                setHouseholdMembers([]);
+            }
+        }
+
+        fetchHouseholdMembers();
+    }, [householdId, userId]);
+
+    useEffect(() => {
+        const recipientId = searchParams.get("recipientId") || "";
+        if (recipientId) {
+            setNewMessageReceiverId(recipientId);
+        }
+    }, [searchParams]);
 
     useEffect(() => {
         if (activeTab === "tickets") {
@@ -360,6 +400,39 @@ function Messages(){
         }
     }
 
+    async function sendHouseholdMessage(e) {
+        e.preventDefault();
+        const receiver = householdMembers.find(member => String(member._id) === String(newMessageReceiverId));
+        const cleanMessage = newMessageText.trim();
+
+        if (!receiver) {
+            setMessageStatus("Choose a household member to message.");
+            return;
+        }
+        if (!cleanMessage) {
+            setMessageStatus("Write a message before sending.");
+            return;
+        }
+
+        try {
+            await axios.post("http://localhost:7000/api/message", {
+                senderId: userId,
+                senderName: userName,
+                receiverId: receiver._id,
+                receiverName: `${receiver.firstName || ""} ${receiver.lastName || ""}`.trim() || receiver.email || "Roommate",
+                listingName: "Household",
+                messageText: cleanMessage
+            });
+            setNewMessageText("");
+            setActiveThread(String(receiver._id));
+            setMessageStatus("Message sent.");
+            setSearchParams({});
+            fetchMessages();
+        } catch (err) {
+            setMessageStatus(err.response?.data?.errorMessage || "Message could not be sent.");
+        }
+    }
+
     async function sendSupportMessage(e) {
         e.preventDefault();
         const supportChatId = `${userId}-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
@@ -439,6 +512,32 @@ return (
                     {/* Thread list */}
                     <div style={{ width: "30%", borderRight: "1px solid #ddd", overflowY: "auto" }}>
                         <div style={{ padding: "15px" }}>
+                            <h3>New Household Message</h3>
+                            {householdMembers.length === 0 ? (
+                                <p>No other household members to message yet.</p>
+                            ) : (
+                                <form onSubmit={sendHouseholdMessage} style={{ marginBottom: "20px", paddingBottom: "15px", borderBottom: "1px solid #ddd" }}>
+                                    <select
+                                        value={newMessageReceiverId}
+                                        onChange={e => setNewMessageReceiverId(e.target.value)}
+                                        style={{ width: "100%", padding: "8px", marginBottom: "8px", borderRadius: "3px", border: "1px solid #ccc", boxSizing: "border-box" }}
+                                    >
+                                        <option value="">Choose a roommate</option>
+                                        {householdMembers.map(member => (
+                                            <option key={member._id} value={member._id}>
+                                                {`${member.firstName || ""} ${member.lastName || ""}`.trim() || member.email || "Roommate"}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <textarea
+                                        value={newMessageText}
+                                        onChange={e => setNewMessageText(e.target.value)}
+                                        placeholder="Write a message to your roommate..."
+                                        style={{ width: "100%", minHeight: "80px", padding: "10px", borderRadius: "5px", border: "1px solid #ccc", boxSizing: "border-box" }}
+                                    />
+                                    <button className="btnGreen" type="submit" style={{ marginTop: "8px", width: "100%" }}>Send Message</button>
+                                </form>
+                            )}
                             <h3>Conversations</h3>
                             {visibleThreadEntries.map(([threadKey, threadMessages]) => (
                                 <div

@@ -16,51 +16,153 @@ function matchesUser(user, listing) {
     return listing.isActive !== false && locationMatches && budgetMatches && tagMatches;
 }
 
-function Notifications() {
+function getNotificationLastSeenKey(userId) {
+    return `notificationsLastSeen_${userId}`;
+}
+
+function getTimestamp(value) {
+    return value ? new Date(value).getTime() : 0;
+}
+
+function formatTime(value) {
+    if (!value) {
+        return "";
+    }
+    return new Date(value).toLocaleString();
+}
+
+function Notifications({ onNotificationsSeen }) {
     const userId = localStorage.getItem("userId");
+    const [receivedMessages, setReceivedMessages] = useState([]);
+    const [applications, setApplications] = useState([]);
     const [matches, setMatches] = useState([]);
+    const [lastSeen, setLastSeen] = useState(0);
     const [message, setMessage] = useState("Loading notifications...");
 
     useEffect(() => {
         async function fetchNotifications() {
             if (!userId) {
-                setMessage("Log in to view listing notifications.");
+                setMessage("Log in to view notifications.");
                 return;
             }
 
+            const previousLastSeen = Number(localStorage.getItem(getNotificationLastSeenKey(userId)) || 0);
+            setLastSeen(previousLastSeen);
+
             try {
-                const [userRes, listingsRes] = await Promise.all([
+                const [userRes, listingsRes, messagesRes, ownListingsRes] = await Promise.all([
                     axios.get("http://localhost:7000/api/user", { params: { id: userId } }),
-                    axios.get("http://localhost:7000/api/listings", { params: { isActive: true } })
+                    axios.get("http://localhost:7000/api/listings", { params: { isActive: true } }),
+                    axios.get("http://localhost:7000/api/messages", { params: { receiverId: userId } }),
+                    axios.get("http://localhost:7000/api/listings", { params: { createdBy: userId } })
                 ]);
                 const user = userRes.data;
                 const listings = Array.isArray(listingsRes.data) ? listingsRes.data : [];
+                const ownListings = Array.isArray(ownListingsRes.data) ? ownListingsRes.data : [];
                 const matchingListings = listings.filter(listing => {
                     return String(listing.createdBy || "") !== String(userId) && matchesUser(user, listing);
                 });
+                const applicationNotifications = ownListings.flatMap(listing => {
+                    return (listing.applicants || []).map(applicant => ({
+                        ...applicant,
+                        listingId: listing._id,
+                        listingName: listing.apartmentName || "Your listing"
+                    }));
+                }).sort((a, b) => getTimestamp(b.createdAt) - getTimestamp(a.createdAt));
+                const inboxMessages = (Array.isArray(messagesRes.data) ? messagesRes.data : [])
+                    .sort((a, b) => getTimestamp(b.createdAt) - getTimestamp(a.createdAt));
+
+                setReceivedMessages(inboxMessages);
+                setApplications(applicationNotifications);
                 setMatches(matchingListings);
-                setMessage(matchingListings.length ? "" : "No new matching listings right now.");
+                setMessage("");
+                localStorage.setItem(getNotificationLastSeenKey(userId), String(Date.now()));
+                if (onNotificationsSeen) {
+                    onNotificationsSeen();
+                }
             } catch (err) {
                 setMessage(err.response?.data?.message || "Notifications could not be loaded.");
             }
         }
 
         fetchNotifications();
-    }, [userId]);
+    }, [onNotificationsSeen, userId]);
+
+    const hasNotifications = receivedMessages.length > 0 || applications.length > 0 || matches.length > 0;
 
     return (
-        <section className="messagePage">
+        <section className="notificationPage">
             <h1>Notifications</h1>
             {message && <p>{message}</p>}
-            {matches.map(listing => (
-                <div className="messageCard" key={listing._id}>
-                    <h2>{listing.apartmentName}</h2>
-                    <p>{listing.location || [listing.city, listing.state].filter(Boolean).join(", ")}</p>
-                    <p>${listing.rentAmount}/month</p>
-                    {listing.lifestyleTags?.length > 0 && <p>Matches your lifestyle tags: {listing.lifestyleTags.join(", ")}</p>}
-                    <Link to={`/Apartment?id=${listing._id}`}>View Listing</Link>
-                </div>
-            ))}
+            {!message && !hasNotifications && <p>No notifications yet.</p>}
+
+            <section className="notificationSection">
+                <h2>Messages</h2>
+                {receivedMessages.length === 0 ? (
+                    <p>No received messages yet.</p>
+                ) : (
+                    receivedMessages.map(item => {
+                        const unread = getTimestamp(item.createdAt) > lastSeen;
+                        const messageLink = item.isSupportMessage ? "/Messages" : `/Messages?recipientId=${item.senderId || ""}`;
+                        return (
+                            <div className={unread ? "notificationCard unreadNotification" : "notificationCard"} key={item._id}>
+                                <span className="notificationIcon">MSG</span>
+                                <div>
+                                    <h3>{unread && <span className="unreadDot">New</span>} Message from {item.senderName || "User"}</h3>
+                                    <p>{item.messageText}</p>
+                                    <small>{formatTime(item.createdAt)}</small>
+                                    <br />
+                                    <Link to={messageLink}>Open conversation</Link>
+                                </div>
+                            </div>
+                        );
+                    })
+                )}
+            </section>
+
+            <section className="notificationSection">
+                <h2>Applications</h2>
+                {applications.length === 0 ? (
+                    <p>No applications on your listings yet.</p>
+                ) : (
+                    applications.map(item => {
+                        const unread = getTimestamp(item.createdAt) > lastSeen;
+                        return (
+                            <div className={unread ? "notificationCard unreadNotification" : "notificationCard"} key={item._id || `${item.listingId}-${item.userId}`}>
+                                <span className="notificationIcon">APP</span>
+                                <div>
+                                    <h3>{unread && <span className="unreadDot">New</span>} Application for {item.listingName}</h3>
+                                    <p>{item.name || item.email || "Someone"} applied. Status: {item.status || "pending"}.</p>
+                                    {item.message && <p>{item.message}</p>}
+                                    <small>{formatTime(item.createdAt)}</small>
+                                    <br />
+                                    <Link to="/ApartmentListing">Review applicants</Link>
+                                </div>
+                            </div>
+                        );
+                    })
+                )}
+            </section>
+
+            <section className="notificationSection">
+                <h2>Suggested Listings</h2>
+                {matches.length === 0 ? (
+                    <p>No matching listings right now.</p>
+                ) : (
+                    matches.map(listing => (
+                        <div className="notificationCard" key={listing._id}>
+                            <span className="notificationIcon">APT</span>
+                            <div>
+                                <h3>{listing.apartmentName}</h3>
+                                <p>{listing.location || [listing.city, listing.state].filter(Boolean).join(", ")}</p>
+                                <p>${listing.rentAmount}/month</p>
+                                {listing.lifestyleTags?.length > 0 && <p>Matches your lifestyle tags: {listing.lifestyleTags.join(", ")}</p>}
+                                <Link to={`/Apartment?id=${listing._id}`}>View Listing</Link>
+                            </div>
+                        </div>
+                    ))
+                )}
+            </section>
         </section>
     );
 }
