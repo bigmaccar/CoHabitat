@@ -4,9 +4,69 @@ function getRequestId(req) {
     return req.params.id || req.query._id || req.query.id || req.body?._id;
 }
 
+function cleanTags(tags) {
+    if (!Array.isArray(tags)) {
+        return [];
+    }
+    return tags.map(tag => String(tag).trim()).filter(Boolean);
+}
+
+function normalizeListingPayload(payload) {
+    const cleanPayload = { ...payload };
+    if (cleanPayload.apartmentName !== undefined) {
+        cleanPayload.apartmentName = String(cleanPayload.apartmentName || "").trim();
+    }
+    if (cleanPayload.description !== undefined) {
+        cleanPayload.description = String(cleanPayload.description || "").trim();
+    }
+    if (cleanPayload.address !== undefined) {
+        cleanPayload.address = String(cleanPayload.address || "").trim();
+    }
+    if (cleanPayload.city !== undefined) {
+        cleanPayload.city = String(cleanPayload.city || "").trim();
+    }
+    if (cleanPayload.state !== undefined) {
+        cleanPayload.state = String(cleanPayload.state || "").trim();
+    }
+    if (cleanPayload.zipCode !== undefined) {
+        cleanPayload.zipCode = String(cleanPayload.zipCode || "").trim();
+    }
+    if (cleanPayload.location !== undefined) {
+        cleanPayload.location = String(cleanPayload.location || "").trim();
+    }
+    if (cleanPayload.houseRules !== undefined) {
+        cleanPayload.houseRules = String(cleanPayload.houseRules || "").trim();
+    }
+    if (cleanPayload.rentAmount !== undefined && cleanPayload.rentAmount !== null && cleanPayload.rentAmount !== "") {
+        cleanPayload.rentAmount = Number(cleanPayload.rentAmount);
+    }
+    if (cleanPayload.lifestyleTags !== undefined) {
+        cleanPayload.lifestyleTags = cleanTags(cleanPayload.lifestyleTags);
+    }
+    if (cleanPayload.idealRoommateTags !== undefined) {
+        cleanPayload.idealRoommateTags = cleanTags(cleanPayload.idealRoommateTags);
+    }
+    if (Array.isArray(cleanPayload.photos)) {
+        cleanPayload.photos = cleanPayload.photos
+            .map(photo => ({ url: String(photo.url || "").trim() }))
+            .filter(photo => photo.url);
+    }
+    if (!cleanPayload.location && (cleanPayload.city || cleanPayload.state)) {
+        cleanPayload.location = [cleanPayload.city, cleanPayload.state].filter(Boolean).join(", ");
+    }
+    return cleanPayload;
+}
+
 const createListing = async(req, res) => {
     try {
-        const newListing = new Listing(req.body);
+        const listingData = normalizeListingPayload(req.body);
+        if (!listingData.apartmentName || !listingData.rentAmount || !listingData.location) {
+            return res.status(400).json({ message: "Apartment name, rent, and location are required." });
+        }
+        if (!listingData.listingKey) {
+            listingData.listingKey = `listing-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
+        }
+        const newListing = new Listing(listingData);
         const savedData = await newListing.save();
         res.status(200).json(savedData);
     } catch (error) {
@@ -25,6 +85,9 @@ const getAllListings = async(req, res) => {
         }
         if (req.query.createdBy) {
             filters.createdBy = req.query.createdBy;
+        }
+        if (req.query.isActive) {
+            filters.isActive = req.query.isActive === "true";
         }
 
         const listingData = await Listing.find(filters).sort({ createdAt: -1 });
@@ -54,14 +117,15 @@ const getListingById = async(req, res) => {
 const updateListing = async(req, res) => {
     try {
         const id = getRequestId(req);
-        const { _id, ...updates } = req.body;
+        const { _id, ...bodyUpdates } = req.body;
+        const updates = normalizeListingPayload(bodyUpdates);
         const query = updates.listingKey ? { listingKey: updates.listingKey } : { _id: id };
         if (!updates.listingKey && !id) {
             return res.status(400).json({ message: "Listing id or listingKey is required." });
         }
 
         const updatedData = await Listing.findOneAndUpdate(query, updates, {
-            new: true,
+            returnDocument: "after",
             upsert: Boolean(updates.listingKey),
             setDefaultsOnInsert: true
         });

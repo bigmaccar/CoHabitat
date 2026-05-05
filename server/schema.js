@@ -44,6 +44,12 @@ const ListingSchema = new Schema({
   apartmentName: String,
   description: String,
   rentAmount: Number,
+  address: String,
+  city: String,
+  state: String,
+  zipCode: String,
+  location: String,
+  houseRules: String,
   isActive: { type: Boolean, default: true },
 
   photos: [
@@ -52,7 +58,23 @@ const ListingSchema = new Schema({
     }
   ],
 
-  lifestyleTags: [String]
+  lifestyleTags: [String],
+  idealRoommateTags: [String],
+  applicants: [
+    {
+      userId: { type: Schema.Types.ObjectId, ref: "User" },
+      name: String,
+      email: String,
+      message: String,
+      status: {
+        type: String,
+        enum: ["pending", "accepted", "declined"],
+        default: "pending"
+      },
+      createdAt: { type: Date, default: Date.now }
+    }
+  ],
+  blacklistedUserIds: [{ type: Schema.Types.ObjectId, ref: "User" }]
 }, { timestamps: true, collection: "Listing" });
 
 const SavedListingSchema = new Schema({
