@@ -1,4 +1,4 @@
-const {SupportTicket} = require("../schema");
+const { SupportTicket, User, Household } = require("../schema");
 
 function getRequestId(req) {
     return req.params.id || req.query._id || req.query.id || req.body?._id;
@@ -149,23 +149,40 @@ const addSupportTicketMessage = async(req, res) => {
 
 const banUser = async (req, res) => {
     try {
-        const { targetUserId, reason, durationDays } = req.body;
-        const byUserId = req.body.byUserId;
+        const { targetUserId, reason, byUserId } = req.body;
+        const durationDays = Number(req.body.durationDays) || 30;
 
         if (!targetUserId || !reason || !byUserId) {
             return res.status(400).json({ errorMessage: "Missing required fields: targetUserId, reason, byUserId" });
         }
 
         const banUntil = new Date();
-        banUntil.setDate(banUntil.getDate() + (durationDays || 30));
+        banUntil.setDate(banUntil.getDate() + durationDays);
 
-        const { User } = require("../schema");
-        await User.findByIdAndUpdate(targetUserId, { 
-            bannedUntil: banUntil,
-            isBanned: true 
-        });
+        const updatedUser = await User.findByIdAndUpdate(
+            targetUserId,
+            {
+                $set: {
+                    bannedUntil: banUntil,
+                    isBanned: true
+                },
+                $push: {
+                    moderationNotes: {
+                        action: "banned",
+                        reason,
+                        byUserId,
+                        createdAt: new Date()
+                    }
+                }
+            },
+            { returnDocument: "after" }
+        );
 
-        res.status(200).json({ message: "User banned successfully", bannedUntil });
+        if (!updatedUser) {
+            return res.status(404).json({ errorMessage: "User not found." });
+        }
+
+        res.status(200).json({ message: "User banned successfully", user: updatedUser, bannedUntil: banUntil });
     } catch (error) {
         res.status(500).json({ errorMessage: error.message });
     }
@@ -173,18 +190,65 @@ const banUser = async (req, res) => {
 
 const kickUser = async (req, res) => {
     try {
-        const { targetUserId, reason, byUserId } = req.body;
+        const { targetUserId, reason, byUserId, householdId } = req.body;
 
         if (!targetUserId || !reason || !byUserId) {
             return res.status(400).json({ errorMessage: "Missing required fields: targetUserId, reason, byUserId" });
         }
 
-        const { User } = require("../schema");
-        await User.findByIdAndUpdate(targetUserId, { 
-            isKicked: true 
-        });
+        const targetUser = await User.findById(targetUserId);
+        if (!targetUser) {
+            return res.status(404).json({ errorMessage: "User not found." });
+        }
 
-        res.status(200).json({ message: "User kicked successfully" });
+        const moderationNote = {
+            action: "kicked",
+            reason,
+            byUserId,
+            createdAt: new Date()
+        };
+
+        let updatedHousehold = null;
+        if (householdId) {
+            updatedHousehold = await Household.findByIdAndUpdate(
+                householdId,
+                {
+                    $pull: { members: { userId: targetUserId } },
+                    $push: { moderationNotes: moderationNote }
+                },
+                { returnDocument: "after" }
+            );
+
+            if (!updatedHousehold) {
+                return res.status(404).json({ errorMessage: "Household not found." });
+            }
+        } else {
+            await Household.updateMany(
+                { "members.userId": targetUserId },
+                {
+                    $pull: { members: { userId: targetUserId } },
+                    $push: { moderationNotes: moderationNote }
+                }
+            );
+        }
+
+        const userUpdate = householdId
+            ? {
+                $set: { isKicked: true },
+                $pull: { households: { householdId } },
+                $push: { moderationNotes: moderationNote }
+            }
+            : {
+                $set: { isKicked: true, households: [] },
+                $push: { moderationNotes: moderationNote }
+            };
+
+        const updatedUser = await User.findByIdAndUpdate(targetUserId, userUpdate, { returnDocument: "after" });
+        if (!updatedUser) {
+            return res.status(404).json({ errorMessage: "User not found." });
+        }
+
+        res.status(200).json({ message: "User kicked successfully", user: updatedUser, household: updatedHousehold });
     } catch (error) {
         res.status(500).json({ errorMessage: error.message });
     }

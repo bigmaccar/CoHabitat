@@ -786,6 +786,114 @@ input:checked + .slider:before {
   background-color: white;
 }
 
+.adminPage {
+  padding: 20px 40px;
+}
+
+.adminToolbar {
+  border: 2px solid #244F26;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 16px;
+  max-width: 900px;
+  background-color: #FDFDFF;
+}
+
+.adminToolbar label {
+  display: block;
+  font-weight: bold;
+  margin-top: 8px;
+}
+
+.adminToolbar input,
+.adminFormGrid input {
+  box-sizing: border-box;
+  border: 2px solid #244F26;
+  border-radius: 5px;
+  padding: 8px;
+  width: 100%;
+}
+
+.adminCardList {
+  list-style-type: none;
+  padding: 0;
+  max-width: 1000px;
+}
+
+.adminCard {
+  border: 2px solid #68B684;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+  background-color: white;
+}
+
+.adminCardHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.adminFormGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.adminFormGrid label {
+  font-weight: bold;
+}
+
+.adminActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.adminMembers {
+  padding-left: 20px;
+}
+
+.adminMembers li {
+  margin-bottom: 8px;
+}
+
+.statusPill {
+  background-color: #e8f5e9;
+  border: 1px solid #244F26;
+  border-radius: 20px;
+  color: #244F26;
+  padding: 6px 12px;
+}
+
+.statusPill.warning {
+  background-color: #fbeaea;
+  border-color: #c0392b;
+  color: #922b21;
+}
+
+.adminSummaryGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.adminSummaryCard {
+  border: 2px solid #68B684;
+  border-radius: 8px;
+  padding: 20px;
+  min-width: 180px;
+  text-decoration: none;
+  background-color: white;
+}
+
+.adminSummaryCard h2 {
+  margin: 0;
+  font-size: 40px;
+}
+
 button:disabled {
   background-color: #aaa;
   cursor: not-allowed;

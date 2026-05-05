@@ -12,6 +12,17 @@ const UserSchema = new Schema({
   budgetMin: Number,
   budgetMax: Number,
   lifestyleTags: [String],
+  isBanned: { type: Boolean, default: false },
+  bannedUntil: Date,
+  isKicked: { type: Boolean, default: false },
+  moderationNotes: [
+    {
+      action: String,
+      reason: String,
+      byUserId: { type: Schema.Types.ObjectId, ref: "User" },
+      createdAt: { type: Date, default: Date.now }
+    }
+  ],
   households: [
     {
       householdId: { type: Schema.Types.ObjectId, ref: "Household" },
@@ -27,6 +38,15 @@ const HouseholdSchema = new Schema({
   state: String,
   zipCode: String,
   maxOccupants: Number,
+  isSuspended: { type: Boolean, default: false },
+  moderationNotes: [
+    {
+      action: String,
+      reason: String,
+      byUserId: { type: Schema.Types.ObjectId, ref: "User" },
+      createdAt: { type: Date, default: Date.now }
+    }
+  ],
 
   members: [
     {

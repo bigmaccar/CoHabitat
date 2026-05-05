@@ -1,4 +1,4 @@
-const { User } = require("../schema.js");
+const { User, Household } = require("../schema.js");
 
 function getRequestId(req) {
     return req.params.id || req.query._id || req.query.id || req.body?._id;
@@ -95,7 +95,7 @@ const updateUser = async(req, res) => {
             updates.lifestyleTags = updates.lifestyleTags.map(tag => String(tag).trim()).filter(Boolean);
         }
 
-        const updatedData = await User.findByIdAndUpdate(id, updates, { new: true });
+        const updatedData = await User.findByIdAndUpdate(id, updates, { returnDocument: "after" });
         if (!updatedData) {
             return res.status(404).json({ message: "User not found." });
         }
@@ -116,6 +116,9 @@ const deleteUser = async(req, res) => {
         if (!deletedData) {
             return res.status(404).json({ message: "User not found." });
         }
+        await Household.updateMany({}, {
+            $pull: { members: { userId: deletedData._id } }
+        });
         res.status(200).json(deletedData);
     } catch(error) {
         res.status(500).json({ message: error.message });
@@ -136,6 +139,15 @@ const loginUser = async (req, res) => {
         }
         if (user.password !== password) {
             return res.status(401).json({ message: "Incorrect password." });
+        }
+        const banStillActive = user.isBanned && (!user.bannedUntil || new Date(user.bannedUntil) > new Date());
+        if (banStillActive) {
+            return res.status(403).json({ message: "This account is banned." });
+        }
+        if (user.isBanned) {
+            user.isBanned = false;
+            user.bannedUntil = undefined;
+            await user.save();
         }
         res.status(200).json({ message: "Login successful", user });
     } catch (error) {
