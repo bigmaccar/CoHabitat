@@ -4,7 +4,7 @@ import axios from 'axios';
 
 const SUPPORT_EMAIL = "support@gmail.com";
 
-function Login() {
+function Login({ onLogin }) {
     const navigate = useNavigate();
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -21,6 +21,9 @@ function Login() {
             localStorage.removeItem("householdId");
             if (user.households && user.households.length > 0) {
                 localStorage.setItem("householdId", user.households[0].householdId);
+            }
+            if (onLogin) {
+                onLogin();
             }
             navigate(user.email.toLowerCase() === SUPPORT_EMAIL ? "/Tickets" : "/");
         } catch (err) {

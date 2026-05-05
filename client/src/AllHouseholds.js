@@ -5,14 +5,19 @@ import axios from "axios";
 function AllHouseholds(){
 
     const [households, setHouseholds] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
 
     useEffect(() => {
             const fetchData = async () => {
                 try {
-                    const allHouseholds = await axios.get("http://localhost:9000/getAllHouseholds");
-                    setHouseholds(allHouseholds);
+                    const allHouseholds = await axios.get("http://localhost:7000/api/households");
+                    setHouseholds(Array.isArray(allHouseholds.data) ? allHouseholds.data : []);
+                    setError("");
                 } catch (error) {
-                    console.log("Error while fetching data", error);
+                    setError(error.response?.data?.errorMessage || "Households could not be loaded.");
+                } finally {
+                    setLoading(false);
                 }
             };
             fetchData();
@@ -31,9 +36,12 @@ function AllHouseholds(){
             </div>
             <div className="body">
                 <h1 style = {{marginLeft: 40}}>All Households</h1>
+                {loading && <p style={{marginLeft: 40}}>Loading households...</p>}
+                {error && <p style={{marginLeft: 40, color: "red"}}>{error}</p>}
+                {!loading && !error && households.length === 0 && <p style={{marginLeft: 40}}>No households found.</p>}
                 <ul>
                     {households.map(household => (
-                        <li><img src={require('./images/homeIcon.png')} />{household.name}
+                        <li key={household._id}><img src={require('./images/homeIcon.png')} alt="Household" />{household.name || "Unnamed household"}
                         <button>Edit Household Info</button> <button>Message Household Owner</button><button>Suspend/Ban Household</button>
                             <button>Delete Household Info</button></li> 
                     ))} {/* buttons don't do anything currently */}

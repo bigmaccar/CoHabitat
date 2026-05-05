@@ -5,14 +5,19 @@ import axios from "axios";
 function AllUsers(){
 
     const [users, setUsers] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
 
     useEffect(() => {
             const fetchData = async () => {
                 try {
-                    const allUsers = await axios.get("http://localhost:9000/getAllUsers");
-                    setUsers(allUsers);
+                    const allUsers = await axios.get("http://localhost:7000/api/users");
+                    setUsers(Array.isArray(allUsers.data) ? allUsers.data : []);
+                    setError("");
                 } catch (error) {
-                    console.log("Error while fetching data", error);
+                    setError(error.response?.data?.message || "Users could not be loaded.");
+                } finally {
+                    setLoading(false);
                 }
             };
             fetchData();
@@ -31,9 +36,12 @@ function AllUsers(){
             </div>
             <div className="body">
                 <h1 style = {{marginLeft: 40}}>All Users</h1>
+                {loading && <p style={{marginLeft: 40}}>Loading users...</p>}
+                {error && <p style={{marginLeft: 40, color: "red"}}>{error}</p>}
+                {!loading && !error && users.length === 0 && <p style={{marginLeft: 40}}>No users found.</p>}
                 <ul>
                     {users.map(user => (
-                        <li><img src={require('./images/person.png')} />{user.firstName + " " + user.lastName}{user.isAdmin && (
+                        <li key={user._id}><img src={require('./images/person.png')} alt="User" />{`${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email}{user.isAdmin && (
                             <img src={require('./images/crown.png')} alt="admin" />
                         )} <button>Edit User Info</button> <button>Message User</button><button>Suspend/Ban User</button>
                             <button>Delete User Info</button></li> 
