@@ -22,6 +22,7 @@ import AllListings from './AllListings';
 import SubmitTicket from './SubmitTicket';
 import Messages from './Messages';
 import Notifications from './Notifications';
+import { getListingMatchDetails } from './matching';
 
 const SUPPORT_EMAIL = "support@gmail.com";
 
@@ -56,6 +57,10 @@ function getApplicantTimestamp(applicant) {
   return applicant?.createdAt ? new Date(applicant.createdAt).getTime() : 0;
 }
 
+function getListingTimestamp(listing) {
+  return listing?.createdAt ? new Date(listing.createdAt).getTime() : 0;
+}
+
 function Header({ authState, onLogout, notificationRefreshKey }) {
   const [notificationCount, setNotificationCount] = useState(0);
   const supportUser = isSupportUser(authState);
@@ -74,20 +79,34 @@ function Header({ authState, onLogout, notificationRefreshKey }) {
 
       try {
         const lastSeen = Number(localStorage.getItem(getNotificationLastSeenKey(authState.userId)) || 0);
-        const [messagesRes, listingsRes] = await Promise.all([
+        const [messagesRes, ownListingsRes, userRes, activeListingsRes, usersRes] = await Promise.all([
           fetch(`http://localhost:7000/api/messages?receiverId=${encodeURIComponent(authState.userId)}`),
-          fetch(`http://localhost:7000/api/listings?createdBy=${encodeURIComponent(authState.userId)}`)
+          fetch(`http://localhost:7000/api/listings?createdBy=${encodeURIComponent(authState.userId)}`),
+          fetch(`http://localhost:7000/api/user?id=${encodeURIComponent(authState.userId)}`),
+          fetch("http://localhost:7000/api/listings?isActive=true"),
+          fetch("http://localhost:7000/api/users")
         ]);
         const messages = await messagesRes.json();
-        const listings = await listingsRes.json();
+        const ownListings = await ownListingsRes.json();
+        const user = await userRes.json();
+        const activeListings = await activeListingsRes.json();
+        const users = await usersRes.json();
+        const usersById = (Array.isArray(users) ? users : []).reduce((owners, owner) => {
+          owners[String(owner._id)] = owner;
+          return owners;
+        }, {});
         const unreadMessages = (Array.isArray(messages) ? messages : []).filter(message => {
           return new Date(message.createdAt).getTime() > lastSeen;
         }).length;
-        const unreadApplications = (Array.isArray(listings) ? listings : []).reduce((total, listing) => {
+        const unreadApplications = (Array.isArray(ownListings) ? ownListings : []).reduce((total, listing) => {
           return total + (listing.applicants || []).filter(applicant => getApplicantTimestamp(applicant) > lastSeen).length;
         }, 0);
+        const unreadMatchingListings = (Array.isArray(activeListings) ? activeListings : []).filter(listing => {
+          return getListingTimestamp(listing) > lastSeen &&
+            getListingMatchDetails(user, listing, usersById[String(listing.createdBy)]).isMatch;
+        }).length;
 
-        setNotificationCount(unreadMessages + unreadApplications);
+        setNotificationCount(unreadMessages + unreadApplications + unreadMatchingListings);
       } catch (error) {
         setNotificationCount(0);
       }

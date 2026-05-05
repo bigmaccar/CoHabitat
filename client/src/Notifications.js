@@ -1,20 +1,7 @@
 import { Link } from "react-router-dom";
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-
-function hasMatchingTag(userTags, listingTags) {
-    const normalizedUserTags = (userTags || []).map(tag => String(tag).toLowerCase());
-    return (listingTags || []).some(tag => normalizedUserTags.includes(String(tag).toLowerCase()));
-}
-
-function matchesUser(user, listing) {
-    const preferredLocation = String(user.preferredLocation || "").toLowerCase();
-    const listingLocation = String(listing.location || `${listing.city || ""}, ${listing.state || ""}`).toLowerCase();
-    const locationMatches = !preferredLocation || listingLocation.includes(preferredLocation.split(",")[0].trim());
-    const budgetMatches = !user.budgetMax || !listing.rentAmount || Number(listing.rentAmount) <= Number(user.budgetMax);
-    const tagMatches = !user.lifestyleTags?.length || hasMatchingTag(user.lifestyleTags, listing.lifestyleTags);
-    return listing.isActive !== false && locationMatches && budgetMatches && tagMatches;
-}
+import { getListingMatchDetails } from "./matching";
 
 function getNotificationLastSeenKey(userId) {
     return `notificationsLastSeen_${userId}`;
@@ -59,9 +46,19 @@ function Notifications({ onNotificationsSeen }) {
                 const user = userRes.data;
                 const listings = Array.isArray(listingsRes.data) ? listingsRes.data : [];
                 const ownListings = Array.isArray(ownListingsRes.data) ? ownListingsRes.data : [];
-                const matchingListings = listings.filter(listing => {
-                    return String(listing.createdBy || "") !== String(userId) && matchesUser(user, listing);
-                });
+                const usersRes = await axios.get("http://localhost:7000/api/users");
+                const users = Array.isArray(usersRes.data) ? usersRes.data : [];
+                const usersById = users.reduce((owners, owner) => {
+                    owners[String(owner._id)] = owner;
+                    return owners;
+                }, {});
+                const matchingListings = listings
+                    .map(listing => ({
+                        ...listing,
+                        matchDetails: getListingMatchDetails(user, listing, usersById[String(listing.createdBy)])
+                    }))
+                    .filter(listing => listing.matchDetails.isMatch)
+                    .sort((a, b) => getTimestamp(b.createdAt) - getTimestamp(a.createdAt));
                 const applicationNotifications = ownListings.flatMap(listing => {
                     return (listing.applicants || []).map(applicant => ({
                         ...applicant,
@@ -149,18 +146,23 @@ function Notifications({ onNotificationsSeen }) {
                 {matches.length === 0 ? (
                     <p>No matching listings right now.</p>
                 ) : (
-                    matches.map(listing => (
-                        <div className="notificationCard" key={listing._id}>
+                    matches.map(listing => {
+                        const unread = getTimestamp(listing.createdAt) > lastSeen;
+                        return (
+                        <div className={unread ? "notificationCard unreadNotification" : "notificationCard"} key={listing._id}>
                             <span className="notificationIcon">APT</span>
                             <div>
-                                <h3>{listing.apartmentName}</h3>
+                                <h3>{unread && <span className="unreadDot">New</span>} {listing.apartmentName}</h3>
                                 <p>{listing.location || [listing.city, listing.state].filter(Boolean).join(", ")}</p>
                                 <p>${listing.rentAmount}/month</p>
-                                {listing.lifestyleTags?.length > 0 && <p>Matches your lifestyle tags: {listing.lifestyleTags.join(", ")}</p>}
+                                <p>{listing.matchDetails.reasons.join(" • ") || "Compatible with your profile preferences."}</p>
+                                <small>{formatTime(listing.createdAt)}</small>
+                                <br />
                                 <Link to={`/Apartment?id=${listing._id}`}>View Listing</Link>
                             </div>
                         </div>
-                    ))
+                        );
+                    })
                 )}
             </section>
         </section>

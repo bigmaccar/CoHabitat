@@ -645,6 +645,31 @@ input[type=text]{
   overflow-wrap: anywhere;
 }
 
+.profileMatchCard {
+  background-color: #e8f5e9;
+  border: 1px solid #68B684;
+  border-radius: 8px;
+  color: #244F26;
+  margin-top: 10px;
+  padding: 10px;
+}
+
+.profileMatchCard strong,
+.profileMatchCard span {
+  display: block;
+}
+
+.profileMatchCard span {
+  font-size: 14px;
+  margin-top: 4px;
+}
+
+.profileMatchPrompt {
+  background-color: #fff8e1;
+  border-color: #d6a73a;
+  color: #5f4300;
+}
+
 .apartmentListActions {
   display: flex;
   align-items: center;

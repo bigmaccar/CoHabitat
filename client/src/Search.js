@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import { getListingMatchDetails } from "./matching";
 
 const fallbackImage = require("./images/apartment1.jpg");
 
@@ -25,6 +26,8 @@ function formatRent(rentAmount) {
 function Search(){
     const [listings, setListings] = useState([]);
     const [savedListings, setSavedListings] = useState([]);
+    const [currentUser, setCurrentUser] = useState(null);
+    const [ownersById, setOwnersById] = useState({});
     const [searchText, setSearchText] = useState("");
     const [maxRent, setMaxRent] = useState("");
     const [tagFilter, setTagFilter] = useState("");
@@ -34,6 +37,7 @@ function Search(){
     useEffect(() => {
         fetchListings();
         fetchSavedListings();
+        fetchMatchContext();
     }, []);
 
     async function fetchListings() {
@@ -63,6 +67,29 @@ function Search(){
             setSavedListings(Array.isArray(res.data) ? res.data : []);
         } catch (err) {
             setMessage(err.response?.data?.errorMessage || "Saved listings could not be loaded.");
+        }
+    }
+
+    async function fetchMatchContext() {
+        const userId = localStorage.getItem("userId");
+        if (!userId) {
+            return;
+        }
+
+        try {
+            const [userRes, usersRes] = await Promise.all([
+                axios.get("http://localhost:7000/api/user", { params: { id: userId } }),
+                axios.get("http://localhost:7000/api/users")
+            ]);
+            const users = Array.isArray(usersRes.data) ? usersRes.data : [];
+            setCurrentUser(userRes.data);
+            setOwnersById(users.reduce((owners, user) => {
+                owners[String(user._id)] = user;
+                return owners;
+            }, {}));
+        } catch (err) {
+            setCurrentUser(null);
+            setOwnersById({});
         }
     }
 
@@ -164,6 +191,9 @@ function Search(){
                 {!loading && visibleListings.length === 0 && <p className="searchMessage">No listings match your search.</p>}
                 {visibleListings.map(listing => {
                     const listingKey = getListingKey(listing);
+                    const matchDetails = currentUser
+                        ? getListingMatchDetails(currentUser, listing, ownersById[String(listing.createdBy)])
+                        : null;
                     return (
                         <article className="apartmentListWrapper" key={listing._id}>
                             <Link
@@ -181,6 +211,18 @@ function Search(){
                                     <p>{formatRent(listing.rentAmount)}</p>
                                     {Array.isArray(listing.lifestyleTags) && listing.lifestyleTags.length > 0 && (
                                         <p>Tags: {listing.lifestyleTags.join(", ")}</p>
+                                    )}
+                                    {matchDetails?.isMatch && (
+                                        <div className="profileMatchCard">
+                                            <strong>Profile match</strong>
+                                            <span>{matchDetails.reasons.slice(0, 3).join(" • ") || "Compatible with your profile preferences."}</span>
+                                        </div>
+                                    )}
+                                    {matchDetails && !matchDetails.profileComplete && (
+                                        <div className="profileMatchCard profileMatchPrompt">
+                                            <strong>Want better roommate matches?</strong>
+                                            <span>Add budget, location, and lifestyle tags in Settings.</span>
+                                        </div>
                                     )}
                                 </div>
                             </Link>
