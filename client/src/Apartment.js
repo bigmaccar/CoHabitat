@@ -324,7 +324,7 @@ function Apartment(){
                         {Array.isArray(owner?.lifestyleTags) && owner.lifestyleTags.length > 0 && (
                             <p><strong>Lifestyle:</strong> {owner.lifestyleTags.join(", ")}</p>
                         )}
-                        <Link to="/TenantProfile">View Tenant Profile</Link>
+                        <Link to={`/TenantProfile?userId=${listing.createdBy || ""}&listingId=${listing._id}`}>View Tenant Profile</Link>
                     </div>
                     <h2>Messages Sent to Lister</h2>
                     <div className="sentMessages">

@@ -263,17 +263,23 @@ function ApartmentListing(){
                         {!listing.applicants || listing.applicants.length === 0 ? (
                             <p>No applicants yet.</p>
                         ) : (
-                            listing.applicants.map(applicant => (
-                                <div key={applicant._id} style={{ border: "1px solid #ccc", padding: "10px", marginTop: "10px" }}>
-                                    <p><strong>{applicant.name || applicant.email || "Applicant"}</strong></p>
-                                    {applicant.email && <p>{applicant.email}</p>}
-                                    {applicant.message && <p>{applicant.message}</p>}
-                                    <p>Status: {applicant.status || "pending"}</p>
-                                    <button className="btnGreen" type="button" onClick={() => updateApplicant(listing, applicant._id, "accepted")}>Accept</button>
-                                    <button className="btnOutline" type="button" onClick={() => updateApplicant(listing, applicant._id, "declined")}>Decline</button>
-                                    <button className="btnRed" type="button" onClick={() => blacklistApplicant(listing, applicant)}>Blacklist</button>
-                                </div>
-                            ))
+                            listing.applicants.map(applicant => {
+                                const isBlacklisted = (listing.blacklistedUserIds || []).map(String).includes(String(applicant.userId));
+                                return (
+                                    <div key={applicant._id} style={{ border: "1px solid #ccc", padding: "10px", marginTop: "10px" }}>
+                                        <p><strong>{applicant.name || applicant.email || "Applicant"}</strong></p>
+                                        {applicant.email && <p>{applicant.email}</p>}
+                                        {applicant.message && <p>{applicant.message}</p>}
+                                        <p>Status: {isBlacklisted ? "blacklisted" : applicant.status || "pending"}</p>
+                                        <Link to={`/TenantProfile?userId=${applicant.userId}&listingId=${listing._id}`}>View Applicant Profile</Link>
+                                        <div style={{ marginTop: "10px" }}>
+                                            <button className="btnGreen" type="button" onClick={() => updateApplicant(listing, applicant._id, "accepted")} disabled={isBlacklisted}>Accept</button>
+                                            <button className="btnOutline" type="button" onClick={() => updateApplicant(listing, applicant._id, "declined")} disabled={isBlacklisted}>Decline</button>
+                                            <button className="btnRed" type="button" onClick={() => blacklistApplicant(listing, applicant)} disabled={isBlacklisted}>Blacklist</button>
+                                        </div>
+                                    </div>
+                                );
+                            })
                         )}
                     </div>
                 ))}

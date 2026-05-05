@@ -20,6 +20,7 @@ import AllUsers from './AllUsers';
 import AllHouseholds from './AllHouseholds';
 import SubmitTicket from './SubmitTicket';
 import Messages from './Messages';
+import Notifications from './Notifications';
 
 const SUPPORT_EMAIL = "support@gmail.com";
 
@@ -75,7 +76,7 @@ function Header({ authState, onLogout }) {
         <li style={{float: 'left'}}><Link to="/"><img src={require('.//images/homeIcon.png')} className="icon" alt="Home"/></Link></li>
         <li style={{fontSize: 45}}>{loginLink}</li>
         <li><Link to="/Messages"><img src={require('.//images/dm.png')} className="icon" alt="Messages"/></Link></li>
-        <li><span><img src={require('.//images/bell.png')} className="icon" alt="Notifications"/></span></li>
+        <li><Link to="/Notifications"><img src={require('.//images/bell.png')} className="icon" alt="Notifications"/></Link></li>
         <li><Link to="/Search"><img src={require('.//images/search.png')} className="icon" alt="Search"/></Link></li>
       </ul>
     </div>
@@ -116,6 +117,7 @@ function App() {
           <Route path = "/TenantProfile" element = {<UserRoute authState={authState}><TenantProfile/></UserRoute>}/>
           <Route path = "/SubmitTicket" element = {<UserRoute authState={authState}><SubmitTicket/></UserRoute>}/>
           <Route path = "/Messages" element = {<UserRoute authState={authState}><Messages/></UserRoute>}/>
+          <Route path = "/Notifications" element = {<UserRoute authState={authState}><Notifications/></UserRoute>}/>
           <Route path = "/AdminHome" element = {<SupportRoute authState={authState}><AdminHome/></SupportRoute>}/>
           <Route path = "/AllUsers" element = {<SupportRoute authState={authState}><AllUsers/></SupportRoute>}/>
           <Route path = "/Tickets" element = {<SupportRoute authState={authState}><Tickets/></SupportRoute>}/>

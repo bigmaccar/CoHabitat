@@ -60,6 +60,7 @@ function Tickets(){
     const [activeTab, setActiveTab] = useState("messages");
     const [supportMessages, setSupportMessages] = useState([]);
     const [supportTickets, setSupportTickets] = useState([]);
+    const [listings, setListings] = useState([]);
     const [activeSenderId, setActiveSenderId] = useState("");
     const [activeTicketId, setActiveTicketId] = useState("");
     const [replyText, setReplyText] = useState("");
@@ -68,7 +69,8 @@ function Tickets(){
     const [ticketFilters, setTicketFilters] = useState({
         type: "",
         status: "",
-        priority: ""
+        priority: "",
+        apartmentId: ""
     });
     const [hiddenChats, setHiddenChats] = useState(() => getSavedChatMap(hiddenChatsKey));
     const [chatNames, setChatNames] = useState(() => getSavedData(chatNamesKey, {}));
@@ -121,6 +123,25 @@ function Tickets(){
         }
     }, [activeTab, fetchSupportTickets]);
 
+    useEffect(() => {
+        async function fetchListings() {
+            if (!isSupportUser) {
+                return;
+            }
+
+            try {
+                const res = await axios.get("http://localhost:7000/api/listings");
+                setListings(Array.isArray(res.data) ? res.data : []);
+            } catch (err) {
+                setListings([]);
+            }
+        }
+
+        if (activeTab === "tickets") {
+            fetchListings();
+        }
+    }, [activeTab, isSupportUser]);
+
     const supportThreads = supportMessages.reduce((threadList, message) => {
         const senderKey = getSupportThreadKey(message);
         if (!threadList[senderKey]) {
@@ -140,6 +161,11 @@ function Tickets(){
     const activeThreadName = activeMessages.length > 0 ? getSupportThreadName(activeSenderId, activeMessages) : "User";
     const supportThreadClosed = isSupportThreadClosed(activeMessages);
     const activeTicket = supportTickets.find(ticket => ticket._id === activeTicketId);
+
+    function getListingName(apartmentId) {
+        const listing = listings.find(item => String(item._id) === String(apartmentId));
+        return listing?.apartmentName || "No apartment selected";
+    }
 
     function isThreadHidden(senderId, threadMessages) {
         return hiddenChats[senderId] === getLastMessageId(threadMessages);
@@ -432,6 +458,15 @@ function Tickets(){
                                 <option value="medium">Medium</option>
                                 <option value="high">High</option>
                             </select>
+                            <select
+                                value={ticketFilters.apartmentId}
+                                onChange={e => setTicketFilters({ ...ticketFilters, apartmentId: e.target.value })}
+                            >
+                                <option value="">All Apartments</option>
+                                {listings.map(listing => (
+                                    <option key={listing._id} value={listing._id}>{listing.apartmentName}</option>
+                                ))}
+                            </select>
 
                             {supportTickets.length === 0 ? (
                                 <p>No support tickets yet.</p>
@@ -446,6 +481,8 @@ function Tickets(){
                                         {ticket.title}
                                         <br />
                                         <small>{ticket.type} / {ticket.status}</small>
+                                        <br />
+                                        <small>{getListingName(ticket.apartmentId)}</small>
                                     </button>
                                 ))
                             )}
@@ -458,6 +495,7 @@ function Tickets(){
                                 <>
                                     <h2>{activeTicket.title}</h2>
                                     <p><strong>Type:</strong> {activeTicket.type}</p>
+                                    <p><strong>Apartment:</strong> {getListingName(activeTicket.apartmentId)}</p>
                                     <p><strong>Priority:</strong> {activeTicket.priority}</p>
                                     <p><strong>Description:</strong> {activeTicket.description}</p>
                                     <label htmlFor="ticketStatus"><strong>Status:</strong></label>

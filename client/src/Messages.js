@@ -122,6 +122,7 @@ function Messages(){
     // Support Tickets state
     const [activeTab, setActiveTab] = useState("messages"); // "messages" or "tickets"
     const [supportTickets, setSupportTickets] = useState([]);
+    const [ticketListings, setTicketListings] = useState([]);
     const [activeTicketId, setActiveTicketId] = useState(null);
     const [ticketError, setTicketError] = useState("");
     const [showCreateTicketForm, setShowCreateTicketForm] = useState(false);
@@ -129,12 +130,14 @@ function Messages(){
         title: "",
         description: "",
         type: "other",
-        priority: "low"
+        priority: "low",
+        apartmentId: ""
     });
     const [ticketMessageText, setTicketMessageText] = useState("");
     const [ticketFilters, setTicketFilters] = useState({
         type: "",
-        status: ""
+        status: "",
+        apartmentId: ""
     });
 
     // Fetch messages (existing)
@@ -189,6 +192,28 @@ function Messages(){
         }
     }, [activeTab, fetchSupportTickets]);
 
+    useEffect(() => {
+        async function fetchTicketListings() {
+            if (!householdId) {
+                setTicketListings([]);
+                return;
+            }
+
+            try {
+                const res = await axios.get("http://localhost:7000/api/listings", {
+                    params: { householdId }
+                });
+                setTicketListings(Array.isArray(res.data) ? res.data : []);
+            } catch (err) {
+                setTicketListings([]);
+            }
+        }
+
+        if (activeTab === "tickets") {
+            fetchTicketListings();
+        }
+    }, [activeTab, householdId]);
+
     // Create support ticket
     async function handleCreateTicket(e) {
         e.preventDefault();
@@ -205,10 +230,11 @@ function Messages(){
                 householdId,
                 reporterId: userId,
                 ...newTicketForm,
+                apartmentId: newTicketForm.apartmentId || undefined,
                 title: newTicketForm.title.trim(),
                 description: newTicketForm.description.trim()
             });
-            setNewTicketForm({ title: "", description: "", type: "other", priority: "low" });
+            setNewTicketForm({ title: "", description: "", type: "other", priority: "low", apartmentId: "" });
             setShowCreateTicketForm(false);
             setActiveTicketId(res.data._id);
             setTicketError("");
@@ -237,6 +263,11 @@ function Messages(){
     }
 
     const activeTicket = supportTickets.find(t => t._id === activeTicketId);
+
+    function getTicketListingName(ticket) {
+        const listing = ticketListings.find(item => String(item._id) === String(ticket?.apartmentId));
+        return listing?.apartmentName || "No apartment selected";
+    }
 
     // Existing message threads logic
     const threads = messages.reduce((threadList, message) => {
@@ -544,6 +575,16 @@ return (
                                 <option value="resolved">Resolved</option>
                                 <option value="closed">Closed</option>
                             </select>
+                            <select
+                                value={ticketFilters.apartmentId}
+                                onChange={e => setTicketFilters({ ...ticketFilters, apartmentId: e.target.value })}
+                                style={{ width: "100%", padding: "8px", marginBottom: "8px", borderRadius: "3px", border: "1px solid #ccc", boxSizing: "border-box" }}
+                            >
+                                <option value="">All Apartments</option>
+                                {ticketListings.map(listing => (
+                                    <option key={listing._id} value={listing._id}>{listing.apartmentName}</option>
+                                ))}
+                            </select>
                         </div>
 
                         <button className="btnGreen" onClick={() => setShowCreateTicketForm(!showCreateTicketForm)} style={{ marginBottom: "15px", width: "100%" }}>
@@ -579,6 +620,12 @@ return (
                                     <option value="medium">Medium</option>
                                     <option value="high">High</option>
                                 </select>
+                                <select value={newTicketForm.apartmentId} onChange={e => setNewTicketForm({ ...newTicketForm, apartmentId: e.target.value })} style={{ width: "100%", padding: "8px", marginBottom: "8px", borderRadius: "3px", border: "1px solid #ccc", boxSizing: "border-box" }}>
+                                    <option value="">No apartment selected</option>
+                                    {ticketListings.map(listing => (
+                                        <option key={listing._id} value={listing._id}>{listing.apartmentName}</option>
+                                    ))}
+                                </select>
                                 <button className="btnGreen" type="submit" style={{ width: "100%" }}>Create</button>
                             </form>
                         )}
@@ -604,6 +651,8 @@ return (
                                     >
                                         <p style={{ margin: "0", fontWeight: "bold" }}>{ticket.title}</p>
                                         <small style={{ color: "#666" }}>Status: {ticket.status}</small>
+                                        <br />
+                                        <small style={{ color: "#666" }}>Apartment: {getTicketListingName(ticket)}</small>
                                     </div>
                                 ))
                             )}
@@ -618,6 +667,7 @@ return (
                             <>
                                 <h3>{activeTicket.title}</h3>
                                 <p><strong>Type:</strong> {activeTicket.type}</p>
+                                <p><strong>Apartment:</strong> {getTicketListingName(activeTicket)}</p>
                                 <p><strong>Priority:</strong> {activeTicket.priority}</p>
                                 <p><strong>Status:</strong> {activeTicket.status}</p>
                                 <p><strong>Description:</strong> {activeTicket.description}</p>
