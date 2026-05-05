@@ -140,7 +140,13 @@ const ChoreSchema = new Schema({
   createdBy: { type: Schema.Types.ObjectId, ref: "User" },
   assignedTo: { type: Schema.Types.ObjectId, ref: "User" },
 
+  category: {
+    type: String,
+    enum: ["chore", "grocery", "agreement"],
+    default: "chore"
+  },
   title: String,
+  notes: String,
   dueDate: Date,
   status: {
     type: String,

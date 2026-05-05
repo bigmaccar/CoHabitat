@@ -6,6 +6,9 @@ function getRequestId(req) {
 
 const createBill = async(req, res) => {
     try {
+        if (!req.body.householdId || !req.body.billName || !req.body.totalAmount) {
+            return res.status(400).json({ message: "Household id, bill name, and total amount are required." });
+        }
         const newBill = new Bill(req.body);
         const savedData = await newBill.save();
         res.status(200).json(savedData);
@@ -53,7 +56,7 @@ const updateBill = async(req, res) => {
         }
 
         const { _id, ...updates } = req.body;
-        const updatedData = await Bill.findByIdAndUpdate(id, updates, { new: true });
+        const updatedData = await Bill.findByIdAndUpdate(id, updates, { returnDocument: "after" });
         if (!updatedData) {
             return res.status(404).json({ message: "Bill not found." });
         }

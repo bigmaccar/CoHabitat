@@ -2,7 +2,6 @@ import { Link } from "react-router-dom";
 import React from "react";
 
 function List(){
-
     return (
         <section className="layout">
             <div className="leftSide">
@@ -18,8 +17,8 @@ function List(){
             </div>
             <div className="body">
                 <h1 style={{marginLeft: 40}}>Create List</h1>
-                <label htmlFor="name">List Name: </label>
-                <input type="text" id="name" name="name" />
+                <p style={{marginLeft: 40}}>Use the shared form on the Lists page to add chores, groceries, or household agreements.</p>
+                <Link to="/Lists" style={{marginLeft: 40, fontSize: 24}}>Back to Lists</Link>
             </div>
         </section>
     );

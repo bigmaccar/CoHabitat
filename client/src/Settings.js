@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import axios from "axios";
 
 function splitTags(value) {
@@ -8,7 +8,7 @@ function splitTags(value) {
 
 function Settings() {
     const userId = localStorage.getItem("userId");
-    const householdId = localStorage.getItem("householdId");
+    const [householdId, setHouseholdId] = useState(localStorage.getItem("householdId") || "");
 
     const [showForm, setShowForm] = useState(false);
     const [name, setName] = useState("");
@@ -17,6 +17,8 @@ function Settings() {
     const [state, setState] = useState("");
     const [zipCode, setZipCode] = useState("");
     const [maxOccupants, setMaxOccupants] = useState("");
+    const [household, setHousehold] = useState(null);
+    const [joinHouseholdId, setJoinHouseholdId] = useState("");
     const [householdMessage, setHouseholdMessage] = useState("");
 
     const [profileLoading, setProfileLoading] = useState(true);
@@ -29,6 +31,25 @@ function Settings() {
     const [budgetMin, setBudgetMin] = useState("");
     const [budgetMax, setBudgetMax] = useState("");
     const [lifestyleTags, setLifestyleTags] = useState("");
+
+    const fetchHousehold = useCallback(async () => {
+        if (!householdId) {
+            setHousehold(null);
+            return;
+        }
+
+        try {
+            const res = await axios.get("http://localhost:7000/api/household", {
+                params: { id: householdId }
+            });
+            setHousehold(res.data);
+        } catch (err) {
+            localStorage.removeItem("householdId");
+            setHouseholdId("");
+            setHousehold(null);
+            setHouseholdMessage("Household could not be loaded.");
+        }
+    }, [householdId]);
 
     useEffect(() => {
         async function fetchProfile() {
@@ -50,6 +71,11 @@ function Settings() {
                 setBudgetMin(user.budgetMin ?? "");
                 setBudgetMax(user.budgetMax ?? "");
                 setLifestyleTags(Array.isArray(user.lifestyleTags) ? user.lifestyleTags.join(", ") : "");
+                if (!householdId && user.households && user.households.length > 0) {
+                    const firstHouseholdId = user.households[0].householdId;
+                    localStorage.setItem("householdId", firstHouseholdId);
+                    setHouseholdId(firstHouseholdId);
+                }
                 setProfileMessage("");
             } catch (err) {
                 setProfileMessage(err.response?.data?.message || "Profile could not be loaded.");
@@ -59,7 +85,11 @@ function Settings() {
         }
 
         fetchProfile();
-    }, [userId]);
+    }, [householdId, userId]);
+
+    useEffect(() => {
+        fetchHousehold();
+    }, [fetchHousehold]);
 
     async function handleUpdateProfile(e) {
         e.preventDefault();
@@ -98,6 +128,11 @@ function Settings() {
 
     async function handleCreateHousehold(e) {
         e.preventDefault();
+        if (!name.trim()) {
+            setHouseholdMessage("Household name is required.");
+            return;
+        }
+
         try {
             const res = await axios.post("http://localhost:7000/api/household", {
                 name,
@@ -105,14 +140,55 @@ function Settings() {
                 city,
                 state,
                 zipCode,
-                maxOccupants: parseInt(maxOccupants),
+                maxOccupants: maxOccupants ? parseInt(maxOccupants, 10) : undefined,
                 createdBy: userId
             });
             localStorage.setItem("householdId", res.data._id);
-            setHouseholdMessage("Household created successfully!");
+            setHouseholdId(res.data._id);
+            setHousehold(res.data);
+            setHouseholdMessage("Household created successfully.");
             setShowForm(false);
+            setName("");
+            setAddress("");
+            setCity("");
+            setState("");
+            setZipCode("");
+            setMaxOccupants("");
         } catch (err) {
-            setHouseholdMessage(err.response?.data?.errorMessage || "Failed to create household.");
+            setHouseholdMessage(err.response?.data?.message || err.response?.data?.errorMessage || "Failed to create household.");
+        }
+    }
+
+    async function handleJoinHousehold(e) {
+        e.preventDefault();
+        const cleanHouseholdId = joinHouseholdId.trim();
+        if (!cleanHouseholdId) {
+            setHouseholdMessage("Household ID is required.");
+            return;
+        }
+
+        try {
+            await axios.post("http://localhost:7000/api/household/" + cleanHouseholdId + "/members", {
+                userId
+            });
+            localStorage.setItem("householdId", cleanHouseholdId);
+            setHouseholdId(cleanHouseholdId);
+            setJoinHouseholdId("");
+            setHouseholdMessage("Joined household successfully.");
+        } catch (err) {
+            setHouseholdMessage(err.response?.data?.message || err.response?.data?.errorMessage || "Failed to join household.");
+        }
+    }
+
+    async function handleLeaveHousehold() {
+        try {
+            await axios.delete("http://localhost:7000/api/household/" + householdId + "/members/" + userId);
+            localStorage.removeItem("householdId");
+            setHouseholdId("");
+            setHousehold(null);
+            setHouseholdMessage("Left household successfully.");
+        } catch (err) {
+            setHouseholdMessage(err.response?.data?.message || err.response?.data?.errorMessage || "Failed to leave household.");
         }
     }
 
@@ -181,18 +257,34 @@ function Settings() {
                 <hr style={{ margin: "20px 0" }} />
 
                 <h2>Household</h2>
-                {householdId
-                    ? <p>Household ID: {householdId}</p>
-                    : <p>You are not part of a household yet.</p>
-                }
-
-                {!householdId && (
-                    <button className="btnGreen" onClick={() => setShowForm(!showForm)}>
-                        {showForm ? "Cancel" : "Create Household"}
-                    </button>
+                {household ? (
+                    <div>
+                        <p><strong>{household.name}</strong></p>
+                        <p>Household ID: {household._id}</p>
+                        <p>{[household.address, household.city, household.state, household.zipCode].filter(Boolean).join(", ")}</p>
+                        {household.maxOccupants && <p>Max occupants: {household.maxOccupants}</p>}
+                        <button className="btnRed" type="button" onClick={handleLeaveHousehold}>Leave Household</button>
+                    </div>
+                ) : (
+                    <p>You are not part of a household yet.</p>
                 )}
 
-                {householdMessage && <p style={{ color: householdMessage.includes("success") ? "green" : "red" }}>{householdMessage}</p>}
+                {!household && (
+                    <>
+                        <button className="btnGreen" onClick={() => setShowForm(!showForm)}>
+                            {showForm ? "Cancel" : "Create Household"}
+                        </button>
+
+                        <form className="billAddForm" onSubmit={handleJoinHousehold}>
+                            <h3>Join Household</h3>
+                            <label>Household ID</label>
+                            <input type="text" value={joinHouseholdId} onChange={e => setJoinHouseholdId(e.target.value)} placeholder="Paste household ID" />
+                            <button className="btnGreen" type="submit">Join</button>
+                        </form>
+                    </>
+                )}
+
+                {householdMessage && <p style={{ color: householdMessage.includes("success") || householdMessage.includes("Joined") || householdMessage.includes("Left") ? "green" : "red" }}>{householdMessage}</p>}
 
                 {showForm && (
                     <form className="billAddForm" onSubmit={handleCreateHousehold}>

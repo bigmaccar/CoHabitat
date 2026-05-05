@@ -6,6 +6,9 @@ function getRequestId(req) {
 
 const createEvent = async(req, res) => {
     try {
+        if (!req.body.householdId || !req.body.title || !req.body.startDateTime) {
+            return res.status(400).json({ message: "Household id, title, and start date are required." });
+        }
         const newEvent = new CalendarEvent(req.body);
         const savedData = await newEvent.save();
         res.status(200).json(savedData);
@@ -53,7 +56,7 @@ const updateEvent = async(req, res) => {
         }
 
         const { _id, ...updates } = req.body;
-        const updatedData = await CalendarEvent.findByIdAndUpdate(id, updates, { new: true });
+        const updatedData = await CalendarEvent.findByIdAndUpdate(id, updates, { returnDocument: "after" });
         if (!updatedData) {
             return res.status(404).json({ message: "Calendar Event not found." });
         }

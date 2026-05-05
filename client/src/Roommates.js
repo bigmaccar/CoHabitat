@@ -1,54 +1,89 @@
 import { Link } from "react-router-dom";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import axios from "axios";
 
+function memberName(user) {
+    return `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email || "Roommate";
+}
+
 function Roommates() {
+    const userId = localStorage.getItem("userId");
+    const householdId = localStorage.getItem("householdId");
     const [roommates, setRoommates] = useState([]);
     const [household, setHousehold] = useState(null);
+    const [memberEmail, setMemberEmail] = useState("");
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState("");
+    const [message, setMessage] = useState("");
+
+    const fetchData = useCallback(async () => {
+        try {
+            if (!householdId) {
+                setHousehold(null);
+                setRoommates([]);
+                setMessage("");
+                return;
+            }
+
+            const [householdResponse, usersResponse] = await Promise.all([
+                axios.get("http://localhost:7000/api/household", {
+                    params: { id: householdId }
+                }),
+                axios.get("http://localhost:7000/api/users")
+            ]);
+
+            const currentHousehold = householdResponse.data;
+            const users = Array.isArray(usersResponse.data) ? usersResponse.data : [];
+            const memberUsers = (currentHousehold.members || []).map(member => {
+                const user = users.find(item => String(item._id) === String(member.userId));
+                return user ? { ...user, isAdmin: member.isAdmin } : null;
+            }).filter(Boolean);
+
+            setHousehold(currentHousehold);
+            setRoommates(memberUsers);
+            setMessage("");
+        } catch (error) {
+            setMessage(error.response?.data?.message || error.response?.data?.errorMessage || "Roommates could not be loaded.");
+        } finally {
+            setLoading(false);
+        }
+    }, [householdId]);
 
     useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const householdId = localStorage.getItem("householdId");
-                if (!householdId) {
-                    setHousehold(null);
-                    setRoommates([]);
-                    setError("");
-                    return;
-                }
-
-                const [householdsResponse, usersResponse] = await Promise.all([
-                    axios.get("http://localhost:7000/api/households"),
-                    axios.get("http://localhost:7000/api/users")
-                ]);
-
-                const currentHousehold = householdsResponse.data.find(item => item._id === householdId);
-                if (!currentHousehold) {
-                    setHousehold(null);
-                    setRoommates([]);
-                    setError("Household could not be found.");
-                    return;
-                }
-
-                const users = Array.isArray(usersResponse.data) ? usersResponse.data : [];
-                const memberUsers = currentHousehold.members.map(member => {
-                    const user = users.find(item => item._id === String(member.userId));
-                    return user ? { ...user, isAdmin: member.isAdmin } : null;
-                }).filter(Boolean);
-
-                setHousehold(currentHousehold);
-                setRoommates(memberUsers);
-                setError("");
-            } catch (error) {
-                setError(error.response?.data?.message || error.response?.data?.errorMessage || "Roommates could not be loaded.");
-            } finally {
-                setLoading(false);
-            }
-        };
         fetchData();
-    }, []);
+    }, [fetchData]);
+
+    async function handleAddMember(e) {
+        e.preventDefault();
+        const cleanEmail = memberEmail.trim().toLowerCase();
+        if (!cleanEmail) {
+            setMessage("Enter an email address.");
+            return;
+        }
+
+        try {
+            await axios.post("http://localhost:7000/api/household/" + householdId + "/members", {
+                email: cleanEmail
+            });
+            setMemberEmail("");
+            setMessage("Roommate added.");
+            fetchData();
+        } catch (error) {
+            setMessage(error.response?.data?.message || error.response?.data?.errorMessage || "Roommate could not be added.");
+        }
+    }
+
+    async function handleRemoveMember(memberId) {
+        try {
+            await axios.delete("http://localhost:7000/api/household/" + householdId + "/members/" + memberId);
+            setMessage("Roommate removed.");
+            fetchData();
+        } catch (error) {
+            setMessage(error.response?.data?.message || error.response?.data?.errorMessage || "Roommate could not be removed.");
+        }
+    }
+
+    const currentMember = (household?.members || []).find(member => String(member.userId) === String(userId));
+    const isCurrentUserAdmin = Boolean(currentMember?.isAdmin);
 
     return (
         <section className="layout">
@@ -65,20 +100,38 @@ function Roommates() {
             </div>
             <div className="body">
                 <h1 style={{ marginLeft: 40 }}>Roommates</h1>
-                {household && <p style={{ marginLeft: 40 }}>{household.name}</p>}
+                {household && (
+                    <div style={{ marginLeft: 40 }}>
+                        <p><strong>{household.name}</strong></p>
+                        <p>Household ID: {household._id}</p>
+                    </div>
+                )}
                 {loading && <p style={{ marginLeft: 40 }}>Loading roommates...</p>}
-                {error && <p style={{ marginLeft: 40, color: "red" }}>{error}</p>}
-                {!loading && !error && !household && <p style={{ marginLeft: 40 }}>You are not part of a household yet.</p>}
+                {message && <p style={{ marginLeft: 40, color: message.includes("added") || message.includes("removed") ? "green" : "red" }}>{message}</p>}
+                {!loading && !household && (
+                    <p style={{ marginLeft: 40 }}>You are not part of a household yet. Go to <Link to="/Settings">Settings</Link> to create or join one.</p>
+                )}
+                {household && (
+                    <form className="billAddForm" style={{ marginLeft: 40, width: 420 }} onSubmit={handleAddMember}>
+                        <h2>Add Roommate</h2>
+                        <label>Email</label>
+                        <input type="email" value={memberEmail} onChange={e => setMemberEmail(e.target.value)} placeholder="roommate@example.com" />
+                        <button className="btnGreen" type="submit">Add Roommate</button>
+                    </form>
+                )}
                 <div className="roommates">
                     <ul>
                         {roommates.map(roommate => (
                             <li key={roommate._id}>
                                 <img src={require("./images/person.png")} alt="Roommate" />
-                                {`${roommate.firstName || ""} ${roommate.lastName || ""}`.trim() || roommate.email}
+                                {memberName(roommate)}
                                 {roommate.isAdmin && <img src={require("./images/crown.png")} alt="admin" />}
+                                {isCurrentUserAdmin && String(roommate._id) !== String(userId) && (
+                                    <button className="btnRed" type="button" onClick={() => handleRemoveMember(roommate._id)}>Remove</button>
+                                )}
                             </li>
                         ))}
-                        <li><Link to="/ApartmentListing">+ List Apartment</Link></li>
+                        {household && <li><Link to="/ApartmentListing">+ List Apartment</Link></li>}
                     </ul>
                 </div>
             </div>

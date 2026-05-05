@@ -16,6 +16,7 @@ function Calendar(){
     const [startDateTime, setStartDateTime] = useState("");
     const [endDateTime, setEndDateTime] = useState("");
     const [peopleOver, setPeopleOver] = useState(false);
+    const [message, setMessage] = useState("");
 
     async function handleDeleteEvent(id) {
         try {
@@ -32,6 +33,11 @@ function Calendar(){
         setSubmitting(true);
         const householdId = localStorage.getItem("householdId");
         const createdBy = localStorage.getItem("userId");
+        if (!householdId) {
+            setMessage("Create or join a household before adding calendar events.");
+            setSubmitting(false);
+            return;
+        }
         try {
             await axios.post("http://localhost:7000/api/event", {
                 householdId,
@@ -54,8 +60,9 @@ function Calendar(){
             setStartDateTime("");
             setEndDateTime("");
             setPeopleOver(false);
+            setMessage("Event created.");
         } catch (err) {
-            console.log(err);
+            setMessage(err.response?.data?.message || err.response?.data?.errorMessage || "Event could not be created.");
         }
         setSubmitting(false);
     }
@@ -91,6 +98,8 @@ function Calendar(){
             </div>
             <div className="body">
                 <h1 style={{marginLeft: 40}}>Calendar</h1>
+                {!localStorage.getItem("householdId") && <p style={{marginLeft: 40}}>Create or join a household in <Link to="/Settings">Settings</Link> before using the calendar.</p>}
+                {message && <p style={{marginLeft: 40, color: message.includes("created") ? "green" : "red"}}>{message}</p>}
 
                 {showForm ? (
                     <div style={{padding: 40}}>

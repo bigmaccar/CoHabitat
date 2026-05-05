@@ -3,7 +3,7 @@ const {createUser, getAllUsers, getUserById, updateUser, deleteUser, loginUser} 
 const {createBill,getBillsByHousehold, getBillById, updateBill, deleteBill} = require("./controller/billController.js"); 
 const {createChore, getAllChoresByHousehold, getChoreById, updateChore, deleteChore} = require("./controller/choreController.js"); 
 const {createEvent, getAllEventsByHouseholdId, getEventById, updateEvent, deleteEvent} = require("./controller/eventController.js"); 
-const {createHousehold, getAllHouseholds, getHouseholdById, updateHousehold, deleteHousehold} = require("./controller/householdController.js"); 
+const {createHousehold, getAllHouseholds, getHouseholdById, updateHousehold, addHouseholdMember, removeHouseholdMember, deleteHousehold} = require("./controller/householdController.js"); 
 const {createListing, getAllListings, getListingById, updateListing, deleteListing} = require("./controller/listingController.js"); 
 const {createMessage, getAllMessagesById} = require("./controller/messageController.js"); 
 const {createSavedListing, getSavedListingById, getAllSavedListings, updateSavedListing, deleteSavedListing} = require("./controller/savedListingController.js");
@@ -22,6 +22,8 @@ router.post("/household", createHousehold);
 router.get("/households", getAllHouseholds);
 router.get("/household", getHouseholdById);
 router.put("/update/household/:id", updateHousehold);
+router.post("/household/:id/members", addHouseholdMember);
+router.delete("/household/:id/members/:userId", removeHouseholdMember);
 router.delete("/delete/household/:id", deleteHousehold);
 
 router.post("/bill", createBill);
