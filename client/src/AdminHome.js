@@ -42,6 +42,7 @@ function AdminHome(){
                         <li><Link to="/Tickets"><figure><img src={require("./images/list.png")} className="icon" alt="Tickets"/><figcaption>Tickets</figcaption></figure></Link></li>
                         <li><Link to="/AllHouseholds"><figure><img src={require("./images/homeIcon.png")} className="icon" alt="Households"/><figcaption>Households</figcaption></figure></Link></li>
                         <li><Link to="/AllUsers"><figure><img src={require("./images/roommates.png")} className="icon" alt="Users"/><figcaption>Users</figcaption></figure></Link></li>
+                        <li><Link to="/AllListings"><figure><img src={require("./images/bill.png")} className="icon" alt="Listings"/><figcaption>Listings</figcaption></figure></Link></li>
                     </ul></center>
                 </div>
             </div>

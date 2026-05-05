@@ -18,6 +18,7 @@ import AdminHome from './AdminHome';
 import Tickets from './Tickets';
 import AllUsers from './AllUsers';
 import AllHouseholds from './AllHouseholds';
+import AllListings from './AllListings';
 import SubmitTicket from './SubmitTicket';
 import Messages from './Messages';
 import Notifications from './Notifications';
@@ -63,6 +64,7 @@ function Header({ authState, onLogout }) {
           <li style={{float: 'left'}}><Link to="/Tickets">Tickets</Link></li>
           <li style={{float: 'left'}}><Link to="/AllUsers">Users</Link></li>
           <li style={{float: 'left'}}><Link to="/AllHouseholds">Households</Link></li>
+          <li style={{float: 'left'}}><Link to="/AllListings">Listings</Link></li>
           <li style={{fontSize: 45}}>{loginLink}</li>
         </ul>
       </div>
@@ -122,6 +124,7 @@ function App() {
           <Route path = "/AllUsers" element = {<SupportRoute authState={authState}><AllUsers/></SupportRoute>}/>
           <Route path = "/Tickets" element = {<SupportRoute authState={authState}><Tickets/></SupportRoute>}/>
           <Route path = "/AllHouseholds" element = {<SupportRoute authState={authState}><AllHouseholds/></SupportRoute>}/>
+          <Route path = "/AllListings" element = {<SupportRoute authState={authState}><AllListings/></SupportRoute>}/>
       </Routes>
     </BrowserRouter>
   );
