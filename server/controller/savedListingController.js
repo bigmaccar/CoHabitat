@@ -7,6 +7,10 @@ function getRequestId(req) {
 const createSavedListing = async(req, res) => {
     try {
         const { userId, listingKey } = req.body;
+        if (!userId || !listingKey) {
+            return res.status(400).json({ message: "User id and listing key are required." });
+        }
+
         const existingSavedListing = await SavedListing.findOne({ userId, listingKey });
         if (existingSavedListing) {
             return res.status(200).json(existingSavedListing);
@@ -28,6 +32,9 @@ const getAllSavedListings = async(req, res) => {
         }
         if (req.query.listingKey) {
             filters.listingKey = req.query.listingKey;
+        }
+        if (req.query.listingId) {
+            filters.listingId = req.query.listingId;
         }
 
         const savedListingData = await SavedListing.find(filters).sort({ createdAt: -1 });
@@ -62,7 +69,7 @@ const updateSavedListing = async(req, res) => {
         }
 
         const { _id, ...updates } = req.body;
-        const updatedData = await SavedListing.findByIdAndUpdate(id, updates, { new: true });
+        const updatedData = await SavedListing.findByIdAndUpdate(id, updates, { returnDocument: "after" });
         if (!updatedData) {
             return res.status(404).json({ message: "Saved Listing not found." });
         }

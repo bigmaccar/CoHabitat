@@ -2,32 +2,53 @@ import { Link } from "react-router-dom";
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 
-const apartments = [
-    {
-        id: "apartment-1",
-        name: "Apartment 1",
-        image: require("./images/apartment1.jpg"),
-        description: "Two bedroom apartment near campus.",
-        rent: "$1200/month",
-        location: "Albany, NY"
-    },
-    {
-        id: "apartment-2",
-        name: "Apartment 2",
-        image: require("./images/apartment2.jpg"),
-        description: "Quiet apartment with shared living space.",
-        rent: "$950/month",
-        location: "Troy, NY"
+const fallbackImage = require("./images/apartment1.jpg");
+
+function getListingKey(listing) {
+    return listing.listingKey || listing._id;
+}
+
+function getListingImage(listing) {
+    if (Array.isArray(listing.photos) && listing.photos.length > 0 && listing.photos[0].url) {
+        return listing.photos[0].url;
     }
-];
+    return fallbackImage;
+}
+
+function formatRent(rentAmount) {
+    if (!rentAmount && rentAmount !== 0) {
+        return "Rent not listed";
+    }
+    return `$${rentAmount}/month`;
+}
 
 function Search(){
+    const [listings, setListings] = useState([]);
     const [savedListings, setSavedListings] = useState([]);
-    const [savedError, setSavedError] = useState("");
+    const [searchText, setSearchText] = useState("");
+    const [maxRent, setMaxRent] = useState("");
+    const [tagFilter, setTagFilter] = useState("");
+    const [message, setMessage] = useState("");
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        fetchListings();
         fetchSavedListings();
     }, []);
+
+    async function fetchListings() {
+        try {
+            const res = await axios.get("http://localhost:7000/api/listings", {
+                params: { isActive: true }
+            });
+            setListings(Array.isArray(res.data) ? res.data : []);
+            setMessage("");
+        } catch (err) {
+            setMessage(err.response?.data?.errorMessage || "Listings could not be loaded.");
+        } finally {
+            setLoading(false);
+        }
+    }
 
     async function fetchSavedListings() {
         const userId = localStorage.getItem("userId");
@@ -39,91 +60,151 @@ function Search(){
             const res = await axios.get("http://localhost:7000/api/savedListings", {
                 params: { userId }
             });
-            setSavedListings(res.data);
-            setSavedError("");
+            setSavedListings(Array.isArray(res.data) ? res.data : []);
         } catch (err) {
-            setSavedError(err.response?.data?.errorMessage || "Saved listings could not be loaded.");
+            setMessage(err.response?.data?.errorMessage || "Saved listings could not be loaded.");
         }
     }
 
-    async function toggleSavedListing(apartment) {
+    async function toggleSavedListing(listing) {
         const userId = localStorage.getItem("userId");
+        const listingKey = getListingKey(listing);
         if (!userId) {
-            setSavedError("You must be logged in to save listings.");
+            setMessage("You must be logged in to save listings.");
             return;
         }
 
         try {
-            if (savedListings.some(savedListing => savedListing.listingKey === apartment.id)) {
-                await axios.delete("http://localhost:7000/api/delete/savedListing/" + apartment.id, {
+            if (savedListings.some(savedListing => savedListing.listingKey === listingKey)) {
+                await axios.delete("http://localhost:7000/api/delete/savedListing/" + listingKey, {
                     params: {
                         userId,
-                        listingKey: apartment.id
+                        listingKey
                     }
                 });
+                setMessage("Listing removed from saved listings.");
             } else {
                 await axios.post("http://localhost:7000/api/savedListing", {
                     userId,
-                    listingKey: apartment.id,
-                    listingName: apartment.name,
-                    listingLocation: apartment.location,
-                    listingRent: apartment.rent
+                    listingId: listing._id,
+                    listingKey,
+                    listingName: listing.apartmentName,
+                    listingLocation: listing.location,
+                    listingRent: formatRent(listing.rentAmount)
                 });
+                setMessage("Listing saved.");
             }
             fetchSavedListings();
         } catch (err) {
-            setSavedError(err.response?.data?.errorMessage || "Saved listing could not be updated.");
+            setMessage(err.response?.data?.errorMessage || "Saved listing could not be updated.");
         }
     }
 
+    function matchesSearch(listing) {
+        const text = searchText.trim().toLowerCase();
+        const tagText = tagFilter.trim().toLowerCase();
+        const maxRentNumber = Number(maxRent);
+        const searchableText = [
+            listing.apartmentName,
+            listing.description,
+            listing.location,
+            listing.city,
+            listing.state,
+            ...(listing.lifestyleTags || []),
+            ...(listing.idealRoommateTags || [])
+        ].join(" ").toLowerCase();
+        const listingTags = [...(listing.lifestyleTags || []), ...(listing.idealRoommateTags || [])]
+            .join(" ")
+            .toLowerCase();
+
+        if (text && !searchableText.includes(text)) {
+            return false;
+        }
+        if (tagText && !listingTags.includes(tagText)) {
+            return false;
+        }
+        if (maxRent && (!listing.rentAmount || listing.rentAmount > maxRentNumber)) {
+            return false;
+        }
+        return true;
+    }
+
     const savedListingKeys = savedListings.map(savedListing => savedListing.listingKey);
+    const visibleListings = listings.filter(matchesSearch);
 
     return (
         <section className="layoutSearch">
             <div className="sidebarSearch">
                 <div className="search">
                     <h1>Apartment Search</h1>
-                    <Link to="/Apartment">View apartment details</Link>
                 </div>
-                <input type="text" placeholder="Search" className="search" />
-                <br />
-                {apartments.map(apartment => (
-                    <div className="apartmentListWrapper" key={apartment.id}>
-                        <div className="apartmentListImage">
-                            <img src={apartment.image} alt={apartment.name} />
+                <input
+                    type="text"
+                    placeholder="Search by name, city, or description"
+                    className="search"
+                    value={searchText}
+                    onChange={e => setSearchText(e.target.value)}
+                />
+                <div className="searchFilterRow">
+                    <input
+                        type="number"
+                        placeholder="Max rent"
+                        value={maxRent}
+                        onChange={e => setMaxRent(e.target.value)}
+                    />
+                    <input
+                        type="text"
+                        placeholder="Lifestyle tag"
+                        value={tagFilter}
+                        onChange={e => setTagFilter(e.target.value)}
+                    />
+                </div>
+                {message && <p className="searchMessage">{message}</p>}
+                {loading && <p className="searchMessage">Loading listings...</p>}
+                {!loading && visibleListings.length === 0 && <p className="searchMessage">No listings match your search.</p>}
+                {visibleListings.map(listing => {
+                    const listingKey = getListingKey(listing);
+                    return (
+                        <div className="apartmentListWrapper" key={listing._id}>
+                            <div className="apartmentListImage">
+                                <img src={getListingImage(listing)} alt={listing.apartmentName || "Apartment"} />
+                            </div>
+                            <div className="apartmentList">
+                                <h1>{listing.apartmentName || "Untitled Listing"}</h1>
+                                <p>{listing.description || "No description provided."}</p>
+                                <p>{listing.location || [listing.city, listing.state].filter(Boolean).join(", ")}</p>
+                                <p>{formatRent(listing.rentAmount)}</p>
+                                {Array.isArray(listing.lifestyleTags) && listing.lifestyleTags.length > 0 && (
+                                    <p>Tags: {listing.lifestyleTags.join(", ")}</p>
+                                )}
+                                <Link to={`/Apartment?id=${listing._id}`}>View Details</Link>
+                                <button type="button" onClick={() => toggleSavedListing(listing)}>
+                                    {savedListingKeys.includes(listingKey) ? "Unsave" : "Save"}
+                                </button>
+                            </div>
                         </div>
-                        <div className="apartmentList">
-                            <h1>{apartment.name}</h1>
-                            <p>{apartment.description}</p>
-                            <p>{apartment.location}</p>
-                            <p>{apartment.rent}</p>
-                            <button onClick={() => toggleSavedListing(apartment)}>
-                                {savedListingKeys.includes(apartment.id) ? "Unsave" : "Save"}
-                            </button>
-                        </div>
-                    </div>
-                ))}
+                    );
+                })}
             </div>
             <div className="bodySearch">
                 <div className="filters">
                     <h2>Saved Listings</h2>
-                    {savedError && <p>{savedError}</p>}
                     {savedListings.length === 0 ? (
                         <p>No saved listings yet.</p>
                     ) : (
                         savedListings.map(savedListing => (
-                            <div key={savedListing._id}>
+                            <div key={savedListing._id} className="savedListingCard">
                                 <h3>{savedListing.listingName}</h3>
                                 <p>{savedListing.listingLocation}</p>
                                 <p>{savedListing.listingRent}</p>
+                                {savedListing.listingId && <Link to={`/Apartment?id=${savedListing.listingId}`}>Open</Link>}
                             </div>
                         ))
                     )}
                 </div>
             </div>
         </section>
-    )
-
+    );
 }
 
 export default Search;
