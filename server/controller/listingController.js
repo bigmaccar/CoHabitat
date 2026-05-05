@@ -1,69 +1,96 @@
-const {Listing} = require("../schema.js");
+const { Listing } = require("../schema.js");
+
+function getRequestId(req) {
+    return req.params.id || req.query._id || req.query.id || req.body?._id;
+}
 
 const createListing = async(req, res) => {
-    try{
-            const newListing = new Listing(req.body);
-            const savedData = await newListing.save();
-            res.status(200).json(savedData);
-    } catch (error){
-        res.status(500).json({errorMessage:error.message})
+    try {
+        const newListing = new Listing(req.body);
+        const savedData = await newListing.save();
+        res.status(200).json(savedData);
+    } catch (error) {
+        res.status(500).json({ errorMessage: error.message });
     }
 };
 
-const getAllListings = async(req, res) =>{
-    try{
-         const filters = {};
-         if (req.query.listingKey) {
+const getAllListings = async(req, res) => {
+    try {
+        const filters = {};
+        if (req.query.listingKey) {
             filters.listingKey = req.query.listingKey;
-         }
-         const listingData = await Listing.find(filters).sort({ createdAt: -1 });
-         res.status(200).json(listingData);
-    }catch (error){
-        res.status(500).json({errorMessage: error.message});
-    }
-}
+        }
+        if (req.query.householdId) {
+            filters.householdId = req.query.householdId;
+        }
+        if (req.query.createdBy) {
+            filters.createdBy = req.query.createdBy;
+        }
 
-const getListingById = async(req, res) =>{
-    try{
-         const id = req.body._id;
-         const listingExist = await Listing.findById(id);
-         if (!listingExist){
-            return res.status(404).json({message: "Listing not found."});
-         }
-         res.status(200).json(listingExist);
-    }catch (error){
-        res.status(500).json({errorMessage: error.message});
+        const listingData = await Listing.find(filters).sort({ createdAt: -1 });
+        res.status(200).json(listingData);
+    } catch (error) {
+        res.status(500).json({ errorMessage: error.message });
     }
-}
+};
 
-const updateListing = async(req, res)=>{
-    try{
-        const id = req.body._id || req.params.id;
-        const updateOptions = {
+const getListingById = async(req, res) => {
+    try {
+        const id = getRequestId(req);
+        if (!id) {
+            return res.status(400).json({ message: "Listing id is required." });
+        }
+
+        const listingExist = await Listing.findById(id);
+        if (!listingExist) {
+            return res.status(404).json({ message: "Listing not found." });
+        }
+        res.status(200).json(listingExist);
+    } catch (error) {
+        res.status(500).json({ errorMessage: error.message });
+    }
+};
+
+const updateListing = async(req, res) => {
+    try {
+        const id = getRequestId(req);
+        const { _id, ...updates } = req.body;
+        const query = updates.listingKey ? { listingKey: updates.listingKey } : { _id: id };
+        if (!updates.listingKey && !id) {
+            return res.status(400).json({ message: "Listing id or listingKey is required." });
+        }
+
+        const updatedData = await Listing.findOneAndUpdate(query, updates, {
             new: true,
-            upsert: true,
+            upsert: Boolean(updates.listingKey),
             setDefaultsOnInsert: true
-        };
-        const query = req.body.listingKey ? { listingKey: req.body.listingKey } : { _id: id };
-        const updatedData = await Listing.findOneAndUpdate(query, req.body, updateOptions);
+        });
         res.status(200).json(updatedData);
-    }catch(error){
-        res.status(500).json({errorMessage: error.message});
+    } catch(error) {
+        res.status(500).json({ errorMessage: error.message });
     }
-}
+};
 
-const deleteListing = async(req, res)=>{
-    try{
-        const id = req.body._id;
-         const listingExist = await Listing.findById(id);
-         if (!listingExist){
-            return res.status(404).json({message: "Listing not found."});
-         }
-         await Listing.findByIdAndDelete(id);
-         res.status(200).json({message: "Listing deleted Successfully"});
-    }catch(error){
-        res.status(500).json({errorMessage: error.message});
+const deleteListing = async(req, res) => {
+    try {
+        const id = getRequestId(req);
+        let deletedData;
+
+        if (req.query.listingKey) {
+            deletedData = await Listing.findOneAndDelete({ listingKey: req.query.listingKey });
+        } else if (id) {
+            deletedData = await Listing.findByIdAndDelete(id);
+        } else {
+            return res.status(400).json({ message: "Listing id or listingKey is required." });
+        }
+
+        if (!deletedData) {
+            return res.status(404).json({ message: "Listing not found." });
+        }
+        res.status(200).json(deletedData);
+    } catch(error) {
+        res.status(500).json({ errorMessage: error.message });
     }
-}
+};
 
-module.exports = {createListing, getAllListings, getListingById, updateListing, deleteListing};
+module.exports = { createListing, getAllListings, getListingById, updateListing, deleteListing };

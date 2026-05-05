@@ -1,5 +1,9 @@
 const {SupportTicket} = require("../schema");
 
+function getRequestId(req) {
+    return req.params.id || req.query._id || req.query.id || req.body?._id;
+}
+
 const createSupportTicket = async (req, res) => {
     try {
         const { householdId, reporterId, title, description } = req.body;
@@ -40,7 +44,11 @@ const getAllSupportTickets = async (req, res) => {
 
 const getSupportTicketById = async(req, res) => {
     try {
-        const id = req.body._id || req.query._id;
+        const id = getRequestId(req);
+        if (!id) {
+            return res.status(400).json({ message: "Support ticket id is required." });
+        }
+
         const supportTicketExist = await SupportTicket.findById(id);
         if (!supportTicketExist) {
             return res.status(404).json({ message: "Support ticket not found." });
@@ -53,12 +61,17 @@ const getSupportTicketById = async(req, res) => {
 
 const updateSupportTicket = async(req, res) => {
     try {
-        const id = req.body._id || req.params.id;
+        const id = getRequestId(req);
+        if (!id) {
+            return res.status(400).json({ message: "Support ticket id is required." });
+        }
+
+        const { _id, ...updates } = req.body;
         const updateOptions = {
             new: true,
             upsert: false
         };
-        const updatedData = await SupportTicket.findByIdAndUpdate(id, req.body, updateOptions);
+        const updatedData = await SupportTicket.findByIdAndUpdate(id, updates, updateOptions);
         if (!updatedData) {
             return res.status(404).json({ message: "Support ticket not found." });
         }
@@ -70,7 +83,7 @@ const updateSupportTicket = async(req, res) => {
 
 const addSupportTicketMessage = async(req, res) => {
     try {
-        const supportTicketId = req.body.supportTicketId;
+        const supportTicketId = req.params.id || req.body.supportTicketId;
         const { authorId, text } = req.body;
         
         if (!supportTicketId || !authorId || !text) {

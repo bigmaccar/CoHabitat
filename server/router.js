@@ -1,6 +1,6 @@
 const express = require("express");
 const {createUser, getAllUsers, getUserById, updateUser, deleteUser, loginUser} = require( "./controller/userController.js");
-const {createBill,getBillsByHousehold, getBillById, getShareById, updateBill, deleteBill} = require("./controller/billController.js"); 
+const {createBill,getBillsByHousehold, getBillById, updateBill, deleteBill} = require("./controller/billController.js"); 
 const {createChore, getAllChoresByHousehold, getChoreById, updateChore, deleteChore} = require("./controller/choreController.js"); 
 const {createEvent, getAllEventsByHouseholdId, getEventById, updateEvent, deleteEvent} = require("./controller/eventController.js"); 
 const {createHousehold, getAllHouseholds, getHouseholdById, updateHousehold, deleteHousehold} = require("./controller/householdController.js"); 
@@ -25,7 +25,6 @@ router.put("/update/household/:id", updateHousehold);
 router.delete("/delete/household/:id", deleteHousehold);
 
 router.post("/bill", createBill);
-router.get("/bill", getShareById);
 router.get("/bill", getBillById);
 router.get("/bill/household",getBillsByHousehold)
 router.put("/update/bill/:id", updateBill);

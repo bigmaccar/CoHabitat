@@ -1,7 +1,11 @@
-const {Household, User} = require("../schema.js");
+const { Household, User } = require("../schema.js");
+
+function getRequestId(req) {
+    return req.params.id || req.query._id || req.query.id || req.body?._id;
+}
 
 const createHousehold = async(req, res) => {
-    try{
+    try {
         const { createdBy, ...householdData } = req.body;
         const newHousehold = new Household({
             ...householdData,
@@ -14,64 +18,70 @@ const createHousehold = async(req, res) => {
             });
         }
         res.status(200).json(savedData);
-    } catch (error){
-        res.status(500).json({errorMessage:error.message})
+    } catch (error) {
+        res.status(500).json({ errorMessage: error.message });
     }
 };
 
-const getAllHouseholds = async(req, res) =>{
-    try{
+const getAllHouseholds = async(req, res) => {
+    try {
         const householdData = await Household.find();
-        if(!householdData || householdData.length === 0){
-            return resizeTo.status(404).json({message:"Household data not found."});
-        }
         res.status(200).json(householdData);
-    } catch (error){
-        res.status(500).json({errorMessage:error.message})
+    } catch (error) {
+        res.status(500).json({ errorMessage: error.message });
     }
-}
+};
 
-const getHouseholdById = async(req, res) =>{
-    try{
-         const id = req.body._id;
-         const householdExist = await Household.findById(id);
-         if (!householdExist){
-            return res.status(404).json({message: "Household not found."});
-         }
-         res.status(200).json(householdExist);
-    }catch (error){
-        res.status(500).json({errorMessage: error.message});
+const getHouseholdById = async(req, res) => {
+    try {
+        const id = getRequestId(req);
+        if (!id) {
+            return res.status(400).json({ message: "Household id is required." });
+        }
+
+        const householdExist = await Household.findById(id);
+        if (!householdExist) {
+            return res.status(404).json({ message: "Household not found." });
+        }
+        res.status(200).json(householdExist);
+    } catch (error) {
+        res.status(500).json({ errorMessage: error.message });
     }
-}
+};
 
-const updateHousehold = async(req, res)=>{
-    try{
-        const id = req.body._id;
-         const householdExist = await Household.findById(id);
-         if (!householdExist){
-            return res.status(404).json({message: "Household not found."});
-         }
-         const updatedData = await Household.findByIdAndUpdate(id, req.body, {
-            new:true
-         });
-         res.status(200).json({message: "Household Updated Successfully"});
-    }catch(error){
-        res.status(500).json({errorMessage: error.message});
+const updateHousehold = async(req, res) => {
+    try {
+        const id = getRequestId(req);
+        if (!id) {
+            return res.status(400).json({ message: "Household id is required." });
+        }
+
+        const { _id, ...updates } = req.body;
+        const updatedData = await Household.findByIdAndUpdate(id, updates, { new: true });
+        if (!updatedData) {
+            return res.status(404).json({ message: "Household not found." });
+        }
+        res.status(200).json(updatedData);
+    } catch(error) {
+        res.status(500).json({ errorMessage: error.message });
     }
-}
+};
 
-const deleteHousehold = async(req, res)=>{
-    try{
-        const id = req.body._id;
-         const householdExist = await Household.findById(id);
-         if (!householdExist){
-            return res.status(404).json({message: "Household not found."});
-         }
-         await Household.findByIdAndDelete(id);
-         res.status(200).json({message: "Household deleted Successfully"});
-    }catch(error){
-        res.status(500).json({errorMessage: error.message});
+const deleteHousehold = async(req, res) => {
+    try {
+        const id = getRequestId(req);
+        if (!id) {
+            return res.status(400).json({ message: "Household id is required." });
+        }
+
+        const deletedData = await Household.findByIdAndDelete(id);
+        if (!deletedData) {
+            return res.status(404).json({ message: "Household not found." });
+        }
+        res.status(200).json(deletedData);
+    } catch(error) {
+        res.status(500).json({ errorMessage: error.message });
     }
-}
+};
 
-module.exports = {createHousehold, getAllHouseholds, getHouseholdById, updateHousehold, deleteHousehold};
+module.exports = { createHousehold, getAllHouseholds, getHouseholdById, updateHousehold, deleteHousehold };
