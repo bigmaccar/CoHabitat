@@ -57,10 +57,19 @@ function Tickets(){
     const isSupportUser = supportUserEmail.toLowerCase() === SUPPORT_EMAIL;
     const hiddenChatsKey = `hiddenSupportChats_${supportUserId}`;
     const chatNamesKey = `supportChatNames_${supportUserId}`;
+    const [activeTab, setActiveTab] = useState("messages");
     const [supportMessages, setSupportMessages] = useState([]);
+    const [supportTickets, setSupportTickets] = useState([]);
     const [activeSenderId, setActiveSenderId] = useState("");
+    const [activeTicketId, setActiveTicketId] = useState("");
     const [replyText, setReplyText] = useState("");
+    const [ticketReplyText, setTicketReplyText] = useState("");
     const [statusMessage, setStatusMessage] = useState("");
+    const [ticketFilters, setTicketFilters] = useState({
+        type: "",
+        status: "",
+        priority: ""
+    });
     const [hiddenChats, setHiddenChats] = useState(() => getSavedChatMap(hiddenChatsKey));
     const [chatNames, setChatNames] = useState(() => getSavedData(chatNamesKey, {}));
 
@@ -87,6 +96,31 @@ function Tickets(){
         fetchSupportMessages();
     }, [fetchSupportMessages]);
 
+    const fetchSupportTickets = useCallback(async () => {
+        if (!isSupportUser) {
+            return;
+        }
+
+        try {
+            const res = await axios.get("http://localhost:7000/api/supportTickets", {
+                params: ticketFilters
+            });
+            const tickets = Array.isArray(res.data) ? res.data : [];
+            setSupportTickets(tickets);
+            if (!activeTicketId && tickets.length > 0) {
+                setActiveTicketId(tickets[0]._id);
+            }
+        } catch (err) {
+            setStatusMessage(err.response?.data?.errorMessage || "Support tickets could not be loaded.");
+        }
+    }, [activeTicketId, isSupportUser, ticketFilters]);
+
+    useEffect(() => {
+        if (activeTab === "tickets") {
+            fetchSupportTickets();
+        }
+    }, [activeTab, fetchSupportTickets]);
+
     const supportThreads = supportMessages.reduce((threadList, message) => {
         const senderKey = getSupportThreadKey(message);
         if (!threadList[senderKey]) {
@@ -105,6 +139,7 @@ function Tickets(){
     const supportUserName = activeMessages.find(message => message.senderName !== "Support Team")?.senderName || "User";
     const activeThreadName = activeMessages.length > 0 ? getSupportThreadName(activeSenderId, activeMessages) : "User";
     const supportThreadClosed = isSupportThreadClosed(activeMessages);
+    const activeTicket = supportTickets.find(ticket => ticket._id === activeTicketId);
 
     function isThreadHidden(senderId, threadMessages) {
         return hiddenChats[senderId] === getLastMessageId(threadMessages);
@@ -214,6 +249,42 @@ function Tickets(){
         }
     }
 
+    async function updateTicketStatus(ticketId, status) {
+        try {
+            const res = await axios.put("http://localhost:7000/api/update/supportTicket/" + ticketId, {
+                status
+            });
+            setSupportTickets(currentTickets => currentTickets.map(ticket => {
+                return ticket._id === ticketId ? res.data : ticket;
+            }));
+            setStatusMessage("Ticket status updated.");
+        } catch (err) {
+            setStatusMessage(err.response?.data?.errorMessage || "Ticket status could not be updated.");
+        }
+    }
+
+    async function sendTicketReply(e) {
+        e.preventDefault();
+        if (!activeTicket || !ticketReplyText.trim()) {
+            return;
+        }
+
+        try {
+            const res = await axios.post("http://localhost:7000/api/supportTicket/" + activeTicket._id + "/messages", {
+                supportTicketId: activeTicket._id,
+                authorId: supportUserId,
+                text: ticketReplyText.trim()
+            });
+            setSupportTickets(currentTickets => currentTickets.map(ticket => {
+                return ticket._id === activeTicket._id ? res.data : ticket;
+            }));
+            setTicketReplyText("");
+            setStatusMessage("Ticket reply sent.");
+        } catch (err) {
+            setStatusMessage(err.response?.data?.errorMessage || "Ticket reply could not be sent.");
+        }
+    }
+
     if (!isSupportUser) {
         return (
             <section className="layout">
@@ -249,10 +320,26 @@ function Tickets(){
                 </div>
             </div>
             <div className="body messagePage">
-                <h1>Support Messages</h1>
+                <h1>Support</h1>
+                <div style={{ marginBottom: "15px" }}>
+                    <button
+                        className={activeTab === "messages" ? "btnGreen" : "btnOutline"}
+                        type="button"
+                        onClick={() => setActiveTab("messages")}
+                    >
+                        Support Messages
+                    </button>
+                    <button
+                        className={activeTab === "tickets" ? "btnGreen" : "btnOutline"}
+                        type="button"
+                        onClick={() => setActiveTab("tickets")}
+                    >
+                        Support Tickets
+                    </button>
+                </div>
                 {statusMessage && <p>{statusMessage}</p>}
 
-                <div className="chatLayout">
+                {activeTab === "messages" && <div className="chatLayout">
                     <div className="threadList">
                         <h2>Users</h2>
                         {supportThreadEntries.length === 0 ? (
@@ -309,7 +396,111 @@ function Tickets(){
                             </button>
                         )}
                     </div>
-                </div>
+                </div>}
+
+                {activeTab === "tickets" && (
+                    <div className="chatLayout">
+                        <div className="threadList">
+                            <h2>Tickets</h2>
+                            <select
+                                value={ticketFilters.type}
+                                onChange={e => setTicketFilters({ ...ticketFilters, type: e.target.value })}
+                            >
+                                <option value="">All Types</option>
+                                <option value="apartment">Apartment</option>
+                                <option value="billing">Billing</option>
+                                <option value="safety">Safety</option>
+                                <option value="bug">Bug</option>
+                                <option value="other">Other</option>
+                            </select>
+                            <select
+                                value={ticketFilters.status}
+                                onChange={e => setTicketFilters({ ...ticketFilters, status: e.target.value })}
+                            >
+                                <option value="">All Statuses</option>
+                                <option value="open">Open</option>
+                                <option value="in_progress">In Progress</option>
+                                <option value="resolved">Resolved</option>
+                                <option value="closed">Closed</option>
+                            </select>
+                            <select
+                                value={ticketFilters.priority}
+                                onChange={e => setTicketFilters({ ...ticketFilters, priority: e.target.value })}
+                            >
+                                <option value="">All Priorities</option>
+                                <option value="low">Low</option>
+                                <option value="medium">Medium</option>
+                                <option value="high">High</option>
+                            </select>
+
+                            {supportTickets.length === 0 ? (
+                                <p>No support tickets yet.</p>
+                            ) : (
+                                supportTickets.map(ticket => (
+                                    <button
+                                        className={activeTicketId === ticket._id ? "threadButton activeThread" : "threadButton"}
+                                        key={ticket._id}
+                                        type="button"
+                                        onClick={() => setActiveTicketId(ticket._id)}
+                                    >
+                                        {ticket.title}
+                                        <br />
+                                        <small>{ticket.type} / {ticket.status}</small>
+                                    </button>
+                                ))
+                            )}
+                        </div>
+
+                        <div className="chatWindow">
+                            {!activeTicket ? (
+                                <p>Select a support ticket.</p>
+                            ) : (
+                                <>
+                                    <h2>{activeTicket.title}</h2>
+                                    <p><strong>Type:</strong> {activeTicket.type}</p>
+                                    <p><strong>Priority:</strong> {activeTicket.priority}</p>
+                                    <p><strong>Description:</strong> {activeTicket.description}</p>
+                                    <label htmlFor="ticketStatus"><strong>Status:</strong></label>
+                                    <select
+                                        id="ticketStatus"
+                                        value={activeTicket.status}
+                                        onChange={e => updateTicketStatus(activeTicket._id, e.target.value)}
+                                    >
+                                        <option value="open">Open</option>
+                                        <option value="in_progress">In Progress</option>
+                                        <option value="resolved">Resolved</option>
+                                        <option value="closed">Closed</option>
+                                    </select>
+
+                                    <h3>Ticket Messages</h3>
+                                    {(!activeTicket.messages || activeTicket.messages.length === 0) ? (
+                                        <p>No ticket messages yet.</p>
+                                    ) : (
+                                        activeTicket.messages.map(message => (
+                                            <div
+                                                className={String(message.authorId) === String(supportUserId) ? "chatBubble outgoingBubble" : "chatBubble incomingBubble"}
+                                                key={message._id || message.createdAt}
+                                            >
+                                                <p>{message.text}</p>
+                                                <small>{String(message.authorId) === String(supportUserId) ? "Support Team" : "User"}</small>
+                                            </div>
+                                        ))
+                                    )}
+
+                                    <form className="chatReplyForm" onSubmit={sendTicketReply}>
+                                        <textarea
+                                            value={ticketReplyText}
+                                            onChange={e => setTicketReplyText(e.target.value)}
+                                            placeholder="Write a ticket reply."
+                                            required
+                                        />
+                                        <button type="submit">Send Ticket Reply</button>
+                                    </form>
+                                </>
+                            )}
+                        </div>
+                    </div>
+                )}
             </div>
         </section>
     );

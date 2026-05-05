@@ -24,10 +24,6 @@ function getLastMessageId(messages) {
     return messages[messages.length - 1]?._id || "";
 }
 
-function createSupportChatId(userId) {
-    return `${userId}-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
-}
-
 function getThreadKey(message, userId) {
     if (message.isSupportMessage) {
         return `support:${message.supportChatId || "legacy"}`;
@@ -140,12 +136,6 @@ function Messages(){
         type: "",
         status: ""
     });
-    const [showModerationForm, setShowModerationForm] = useState(false);
-    const [moderationData, setModerationData] = useState({
-        action: "ban",
-        reason: "",
-        durationDays: 30
-    });
 
     // Fetch messages (existing)
     const fetchMessages = useCallback(async () => {
@@ -171,18 +161,23 @@ function Messages(){
 
     // Fetch support tickets
     const fetchSupportTickets = useCallback(async () => {
-    if (!householdId) return;
-    try {
-        const params = { householdId, ...ticketFilters };
-        const res = await axios.get("http://localhost:7000/api/supportTickets", {
-            params
-        });
-        setSupportTickets(res.data);
-        setTicketError("");
-    } catch (err) {
-        setTicketError(err.response?.data?.errorMessage || "Could not load support tickets");
-    }
-}, [householdId, ticketFilters]);
+        if (!userId) return;
+        try {
+            const params = {
+                reporterId: userId,
+                ...ticketFilters
+            };
+            const res = await axios.get("http://localhost:7000/api/supportTickets", { params });
+            const tickets = Array.isArray(res.data) ? res.data : [];
+            setSupportTickets(tickets);
+            if (!activeTicketId && tickets.length > 0) {
+                setActiveTicketId(tickets[0]._id);
+            }
+            setTicketError("");
+        } catch (err) {
+            setTicketError(err.response?.data?.errorMessage || "Could not load support tickets");
+        }
+    }, [activeTicketId, ticketFilters, userId]);
 
     useEffect(() => {
         fetchMessages();
@@ -197,14 +192,25 @@ function Messages(){
     // Create support ticket
     async function handleCreateTicket(e) {
         e.preventDefault();
+        if (!householdId) {
+            setTicketError("Create or join a household before opening a support ticket.");
+            return;
+        }
+        if (!newTicketForm.title.trim() || !newTicketForm.description.trim()) {
+            setTicketError("Title and description are required.");
+            return;
+        }
         try {
-            await axios.post("http://localhost:7000/api/supportTicket", {
+            const res = await axios.post("http://localhost:7000/api/supportTicket", {
                 householdId,
                 reporterId: userId,
-                ...newTicketForm
+                ...newTicketForm,
+                title: newTicketForm.title.trim(),
+                description: newTicketForm.description.trim()
             });
             setNewTicketForm({ title: "", description: "", type: "other", priority: "low" });
             setShowCreateTicketForm(false);
+            setActiveTicketId(res.data._id);
             setTicketError("");
             fetchSupportTickets();
         } catch (err) {
@@ -215,30 +221,18 @@ function Messages(){
     // Add message to support ticket
     async function handleAddTicketMessage(e) {
         e.preventDefault();
-        if (!ticketMessageText || !activeTicketId) return;
+        if (!ticketMessageText.trim() || !activeTicketId) return;
 
         try {
             await axios.post(`http://localhost:7000/api/supportTicket/${activeTicketId}/messages`, {
                 supportTicketId: activeTicketId,
                 authorId: userId,
-                text: ticketMessageText
+                text: ticketMessageText.trim()
             });
             setTicketMessageText("");
             fetchSupportTickets();
         } catch (err) {
             setTicketError(err.response?.data?.errorMessage || "Failed to add message");
-        }
-    }
-
-    // Update ticket status
-    async function handleUpdateTicketStatus(ticketId, newStatus) {
-        try {
-            await axios.put(`http://localhost:7000/api/update/supportTicket/${ticketId}`, {
-                status: newStatus
-            });
-            fetchSupportTickets();
-        } catch (err) {
-            setTicketError(err.response?.data?.errorMessage || "Failed to update status");
         }
     }
 
@@ -359,49 +353,6 @@ function Messages(){
         }
     }
 
-    async function handleBanUser() {
-    if (!activeTicket?.reporterId || !moderationData.reason) {
-        setTicketError("Missing reason for moderation action");
-        return;
-    }
-
-    try {
-        await axios.post("http://localhost:7000/api/moderation/ban", {
-            targetUserId: activeTicket.reporterId,
-            reason: moderationData.reason,
-            durationDays: moderationData.durationDays,
-            byUserId: userId
-        });
-        setTicketError("");
-        setShowModerationForm(false);
-        setModerationData({ action: "ban", reason: "", durationDays: 30 });
-        alert("User banned successfully");
-    } catch (err) {
-        setTicketError(err.response?.data?.errorMessage || "Failed to ban user");
-    }
-}
-
-    async function handleKickUser() {
-    if (!activeTicket?.reporterId || !moderationData.reason) {
-        setTicketError("Missing reason for moderation action");
-        return;
-    }
-
-    try {
-        await axios.post("http://localhost:7000/api/moderation/kick", {
-            targetUserId: activeTicket.reporterId,
-            reason: moderationData.reason,
-            byUserId: userId
-        });
-        setTicketError("");
-        setShowModerationForm(false);
-        setModerationData({ action: "ban", reason: "", durationDays: 30 });
-        alert("User kicked successfully");
-    } catch (err) {
-        setTicketError(err.response?.data?.errorMessage || "Failed to kick user");
-    }
-}
-
 return (
     <section className="layout">
         <div className="leftSide">
@@ -475,6 +426,28 @@ return (
                                         {chatNames[threadKey] || getThreadName(threadMessages, userId)}
                                     </p>
                                     <small>{threadMessages.length} messages</small>
+                                    <div style={{ marginTop: "8px" }}>
+                                        <button
+                                            className="smallChatButton"
+                                            type="button"
+                                            onClick={e => {
+                                                e.stopPropagation();
+                                                renameChat(threadKey, threadMessages);
+                                            }}
+                                        >
+                                            Rename
+                                        </button>
+                                        <button
+                                            className="smallChatButton deleteChatButton"
+                                            type="button"
+                                            onClick={e => {
+                                                e.stopPropagation();
+                                                hideChat(threadKey, threadMessages);
+                                            }}
+                                        >
+                                            Delete
+                                        </button>
+                                    </div>
                                 </div>
                             ))}
                         </div>
@@ -646,19 +619,7 @@ return (
                                 <h3>{activeTicket.title}</h3>
                                 <p><strong>Type:</strong> {activeTicket.type}</p>
                                 <p><strong>Priority:</strong> {activeTicket.priority}</p>
-                                <p>
-                                    <strong>Status:</strong>
-                                    <select
-                                        value={activeTicket.status}
-                                        onChange={e => handleUpdateTicketStatus(activeTicket._id, e.target.value)}
-                                        style={{ marginLeft: "10px", padding: "5px" }}
-                                    >
-                                        <option value="open">Open</option>
-                                        <option value="in_progress">In Progress</option>
-                                        <option value="resolved">Resolved</option>
-                                        <option value="closed">Closed</option>
-                                    </select>
-                                </p>
+                                <p><strong>Status:</strong> {activeTicket.status}</p>
                                 <p><strong>Description:</strong> {activeTicket.description}</p>
                                 <p><strong>Created:</strong> {new Date(activeTicket.createdAt).toLocaleString()}</p>
 
@@ -666,12 +627,12 @@ return (
 
                                 <h4>Messages</h4>
                                 <div style={{ border: "1px solid #ddd", padding: "10px", borderRadius: "5px", maxHeight: "250px", overflowY: "auto", marginBottom: "15px" }}>
-                                    {activeTicket.messages.length === 0 ? (
+                                    {(!activeTicket.messages || activeTicket.messages.length === 0) ? (
                                         <p>No messages yet.</p>
                                     ) : (
                                         activeTicket.messages.map((msg, idx) => (
                                             <div key={idx} style={{ marginBottom: "10px", padding: "8px", backgroundColor: "#f9f9f9", borderRadius: "3px" }}>
-                                                <p style={{ margin: "0", fontWeight: "bold", fontSize: "12px" }}>Author: {msg.authorId}</p>
+                                                <p style={{ margin: "0", fontWeight: "bold", fontSize: "12px" }}>{String(msg.authorId) === String(userId) ? "You" : "Support"}</p>
                                                 <p style={{ margin: "5px 0 0 0" }}>{msg.text}</p>
                                                 <small>{new Date(msg.createdAt).toLocaleString()}</small>
                                             </div>
@@ -688,64 +649,6 @@ return (
                                     />
                                     <button className="btnGreen" type="submit" style={{ marginTop: "10px" }}>Send Message</button>
                                 </form>
-
-                                <hr style={{ margin: "20px 0" }} />
-
-                                <h4>Moderation Actions</h4>
-                                {!showModerationForm ? (
-                                    <div style={{ display: "flex", gap: "10px" }}>
-                                        <button 
-                                            style={{ padding: "10px 15px", backgroundColor: "#ff6b6b", color: "white", border: "none", borderRadius: "5px", cursor: "pointer" }}
-                                            onClick={() => { setModerationData({ ...moderationData, action: "ban" }); setShowModerationForm(true); }}
-                                        >
-                                            Ban User
-                                        </button>
-                                        <button 
-                                            style={{ padding: "10px 15px", backgroundColor: "#ff9800", color: "white", border: "none", borderRadius: "5px", cursor: "pointer" }}
-                                            onClick={() => { setModerationData({ ...moderationData, action: "kick" }); setShowModerationForm(true); }}
-                                        >
-                                            Kick User
-                                        </button>
-                                    </div>
-                                ) : (
-                                    <div style={{ padding: "15px", border: "1px solid #ddd", borderRadius: "5px", marginTop: "10px" }}>
-                                        <h5>Confirm {moderationData.action === "ban" ? "Ban" : "Kick"}</h5>
-                                        <textarea
-                                            placeholder="Reason for action..."
-                                            value={moderationData.reason}
-                                            onChange={e => setModerationData({ ...moderationData, reason: e.target.value })}
-                                            style={{ width: "100%", padding: "8px", marginBottom: "8px", borderRadius: "3px", border: "1px solid #ccc", boxSizing: "border-box" }}
-                                        />
-                                        {moderationData.action === "ban" && (
-                                            <div style={{ marginBottom: "8px" }}>
-                                                <label>Ban Duration (days): </label>
-                                                <input 
-                                                    type="number" 
-                                                    value={moderationData.durationDays} 
-                                                    onChange={e => setModerationData({ ...moderationData, durationDays: parseInt(e.target.value) })}
-                                                    min="1"
-                                                    style={{ width: "100%", padding: "8px", borderRadius: "3px", border: "1px solid #ccc", boxSizing: "border-box" }}
-                                                />
-                                            </div>
-                                        )}
-                                        <div style={{ display: "flex", gap: "10px" }}>
-                                            <button 
-                                                className="btnGreen"
-                                                onClick={moderationData.action === "ban" ? handleBanUser : handleKickUser}
-                                                style={{ flex: 1 }}
-                                            >
-                                                Confirm {moderationData.action === "ban" ? "Ban" : "Kick"}
-                                            </button>
-                                            <button 
-                                                className="btnOutline"
-                                                onClick={() => setShowModerationForm(false)}
-                                                style={{ flex: 1 }}
-                                            >
-                                                Cancel
-                                            </button>
-                                        </div>
-                                    </div>
-                                )}
                             </>
                         )}
                     </div>
