@@ -9,6 +9,36 @@ body {
     color: #1a1a1a;
 }
 
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+img {
+  max-width: 100%;
+}
+
+h1,
+h2,
+h3,
+p,
+li,
+label,
+span,
+small,
+strong,
+a {
+  overflow-wrap: anywhere;
+}
+
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
@@ -57,20 +87,39 @@ a:visited {
   overflow: hidden;
   background-color: #68B684;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
 }
 
 .header ul li {
-  float: right;
+  float: none !important;
 }
 
 .header ul li a {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   color: white;
-  text-align: right;
-  padding: 25px 16px;
+  min-height: 76px;
+  text-align: center;
+  padding: 12px 16px;
   text-decoration: none;
-  justify-content: right;
   transition: background-color 0.2s ease;
+}
+
+.header ul strong {
+  margin-right: auto;
+}
+
+.header ul strong li a {
+  font-size: clamp(28px, 5vw, 45px);
+  font-weight: 800;
+}
+
+.header ul > li {
+  font-size: clamp(18px, 4vw, 34px) !important;
 }
 
 .header ul li a:hover {
@@ -120,10 +169,18 @@ a:visited {
   display: block;
   color: white;
   text-align: center;
-  padding: 15px 30px;
+  padding: 14px 8px;
   text-decoration: none;
   justify-content: left;
   transition: background-color 0.2s ease;
+}
+
+.sidebar figure {
+  margin: 8px 0;
+}
+
+.sidebar figcaption {
+  font-size: 14px;
 }
 
 .sidebar ul li a:hover {
@@ -508,10 +565,10 @@ input[type=text]{
   box-sizing: border-box;
   border: 3px solid #244F26;
   border-radius: 5px;
-  width: 900px;
+  width: min(100%, 900px);
   padding: 12px;
   margin: 10px 0;
-  margin-left: 75px;
+  margin-left: 0;
   /* need to add search icon*/
 }
 
@@ -1410,7 +1467,7 @@ input[type=submit]:hover {
 .billAddForm input[type=number],
 .billAddForm input[type=date],
 .billAddForm select {
-  width: 300px;
+  width: 100%;
   margin-left: 0;
 }
 
@@ -1470,4 +1527,189 @@ input[type=submit]:hover {
   margin-left: 8px;
   color: #27ae60;
   font-weight: bold;
+}
+
+@media (max-width: 900px) {
+  .layout {
+    grid:
+      "leftSide body" 1fr
+      "footer footer" auto
+      / 120px minmax(0, 1fr);
+  }
+
+  .body,
+  .leftSide,
+  .sidebar,
+  .sidebar ul,
+  .layoutSearch,
+  .sidebarSearch,
+  .bodySearch,
+  .layoutApartment,
+  .sidebarApartment,
+  .bodyApartment {
+    min-width: 0;
+  }
+
+  .icon {
+    height: 38px;
+    width: 38px;
+  }
+
+  .sidebar ul {
+    overflow: visible;
+  }
+
+  .sidebar ul li a {
+    padding: 12px 6px;
+  }
+
+  .apartment {
+    margin-left: 0;
+  }
+
+  .homeDashboard,
+  .notificationPage,
+  .messagePage,
+  .adminPage {
+    padding: 20px;
+  }
+
+  .billAddForm,
+  .messagePanel,
+  .supportComposer,
+  .messageListerForm,
+  .sentMessages,
+  .tenantCard,
+  .listingStatusCard {
+    width: 100% !important;
+    max-width: 100%;
+  }
+
+  .body > .billAddForm,
+  .body form.billAddForm {
+    margin-left: 20px !important;
+    margin-right: 20px !important;
+    width: calc(100% - 40px) !important;
+  }
+
+  .listsWrapper {
+    width: min(100%, 320px);
+    margin-left: 0;
+  }
+
+  .listsGrid {
+    padding: 0 20px 20px;
+  }
+
+  .roommates {
+    font-size: clamp(20px, 4vw, 30px);
+  }
+
+  .shareRow,
+  .billCardHeader,
+  .adminCardHeader,
+  .notificationCard {
+    flex-wrap: wrap;
+  }
+
+  .roommateTabs,
+  .commentInput {
+    flex-wrap: wrap;
+  }
+
+  .commentInput input {
+    flex-basis: 220px;
+  }
+
+  .layoutApartment {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "sidebarApartment"
+      "bodyApartment";
+    padding: 20px;
+  }
+
+  .apartmentPage,
+  .apartmentPage2 {
+    margin: 0;
+  }
+
+  .apartmentPageImage {
+    width: 100%;
+    height: auto;
+    max-height: 420px;
+    object-fit: cover;
+  }
+
+  .containerApartment {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    margin-right: 0;
+  }
+
+  .body > div[style*="display: flex"][style*="overflow: hidden"] {
+    flex-direction: column !important;
+    overflow: visible !important;
+  }
+
+  .body > div[style*="display: flex"][style*="overflow: hidden"] > div {
+    width: 100% !important;
+    border-right: 0 !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .header ul {
+    justify-content: center;
+  }
+
+  .header ul strong {
+    flex-basis: 100%;
+    margin-right: 0;
+  }
+
+  .header ul strong li a,
+  .header ul li a {
+    min-height: 54px;
+    padding: 8px 12px;
+  }
+
+  .layout {
+    display: block;
+  }
+
+  .sidebar ul {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    min-height: 0;
+  }
+
+  .sidebar ul li {
+    flex: 1 1 92px;
+  }
+
+  .sidebar figcaption {
+    font-size: 12px;
+  }
+
+  .homeHero h1 {
+    font-size: 34px;
+  }
+
+  .homeSummaryGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .layoutSearch {
+    padding: 16px;
+  }
+
+  .searchFilterRow input {
+    width: 100%;
+  }
+
+  .apartmentListActions {
+    flex-wrap: wrap;
+  }
 }
