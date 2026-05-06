@@ -29,7 +29,8 @@ const SUPPORT_EMAIL = "support@gmail.com";
 function getAuthState() {
   return {
     userId: localStorage.getItem("userId") || "",
-    userEmail: localStorage.getItem("userEmail") || ""
+    userEmail: localStorage.getItem("userEmail") || "",
+    householdId: localStorage.getItem("householdId") || ""
   };
 }
 
@@ -59,6 +60,11 @@ function getApplicantTimestamp(applicant) {
 
 function getListingTimestamp(listing) {
   return listing?.createdAt ? new Date(listing.createdAt).getTime() : 0;
+}
+
+function getFirstHouseholdId(user) {
+  const firstHousehold = user?.households?.[0]?.householdId;
+  return firstHousehold?._id || firstHousehold || "";
 }
 
 function Header({ authState, onLogout, notificationRefreshKey }) {
@@ -160,6 +166,48 @@ function App() {
   function refreshAuthState() {
     setAuthState(getAuthState());
   }
+
+  const refreshUserSession = useCallback(async () => {
+    if (!authState.userId) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`http://localhost:7000/api/user?id=${encodeURIComponent(authState.userId)}`);
+      if (!res.ok) {
+        return;
+      }
+
+      const user = await res.json();
+      const householdId = getFirstHouseholdId(user);
+      localStorage.setItem("userName", `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email);
+      localStorage.setItem("userEmail", user.email || "");
+      if (householdId) {
+        localStorage.setItem("householdId", householdId);
+      } else {
+        localStorage.removeItem("householdId");
+      }
+
+      setAuthState(current => {
+        const next = getAuthState();
+        return current.userId === next.userId &&
+          current.userEmail === next.userEmail &&
+          current.householdId === next.householdId ? current : next;
+      });
+    } catch (error) {
+      // Keep the current browser session if the backend is temporarily unavailable.
+    }
+  }, [authState.userId]);
+
+  useEffect(() => {
+    refreshUserSession();
+    const sessionRefresh = setInterval(refreshUserSession, 5000);
+    window.addEventListener("focus", refreshUserSession);
+    return () => {
+      clearInterval(sessionRefresh);
+      window.removeEventListener("focus", refreshUserSession);
+    };
+  }, [refreshUserSession]);
 
   function handleLogout() {
     localStorage.removeItem("userId");

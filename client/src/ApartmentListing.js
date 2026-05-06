@@ -147,14 +147,37 @@ function ApartmentListing(){
         }
     }
 
-    function updateApplicant(listing, applicantId, status) {
+    function getListingHouseholdId(listing) {
+        return listing.householdId?._id || listing.householdId || householdId;
+    }
+
+    async function updateApplicant(listing, selectedApplicant, status) {
+        const targetHouseholdId = getListingHouseholdId(listing);
+
+        if (status === "accepted") {
+            if (!targetHouseholdId || !selectedApplicant.userId) {
+                setMessage("Applicant could not be added to the household.");
+                return;
+            }
+
+            try {
+                await axios.post("http://localhost:7000/api/household/" + targetHouseholdId + "/members", {
+                    userId: selectedApplicant.userId,
+                    isAdmin: false
+                });
+            } catch (err) {
+                setMessage(err.response?.data?.message || err.response?.data?.errorMessage || "Applicant could not be added to the household.");
+                return;
+            }
+        }
+
         const updatedApplicants = (listing.applicants || []).map(applicant => {
-            if (applicant._id === applicantId) {
+            if (applicant._id === selectedApplicant._id) {
                 return { ...applicant, status };
             }
             return applicant;
         });
-        updateListing(listing, { applicants: updatedApplicants }, `Applicant ${status}.`);
+        updateListing(listing, { applicants: updatedApplicants }, status === "accepted" ? "Applicant accepted and added to household." : `Applicant ${status}.`);
     }
 
     function blacklistApplicant(listing, applicant) {
@@ -273,8 +296,8 @@ function ApartmentListing(){
                                         <p>Status: {isBlacklisted ? "blacklisted" : applicant.status || "pending"}</p>
                                         <Link to={`/TenantProfile?userId=${applicant.userId}&listingId=${listing._id}`}>View Applicant Profile</Link>
                                         <div style={{ marginTop: "10px" }}>
-                                            <button className="btnGreen" type="button" onClick={() => updateApplicant(listing, applicant._id, "accepted")} disabled={isBlacklisted}>Accept</button>
-                                            <button className="btnOutline" type="button" onClick={() => updateApplicant(listing, applicant._id, "declined")} disabled={isBlacklisted}>Decline</button>
+                                            <button className="btnGreen" type="button" onClick={() => updateApplicant(listing, applicant, "accepted")} disabled={isBlacklisted}>Accept</button>
+                                            <button className="btnOutline" type="button" onClick={() => updateApplicant(listing, applicant, "declined")} disabled={isBlacklisted}>Decline</button>
                                             <button className="btnRed" type="button" onClick={() => blacklistApplicant(listing, applicant)} disabled={isBlacklisted}>Blacklist</button>
                                         </div>
                                     </div>
